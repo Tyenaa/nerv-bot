@@ -1,60 +1,60 @@
+// ---------------------------
+// NERV BOT COMPLETO
+// ---------------------------
 const { 
   Client, 
   GatewayIntentBits, 
-  Partials,
   ActionRowBuilder, 
   ButtonBuilder, 
   ButtonStyle, 
   ChannelType, 
   PermissionsBitField, 
   EmbedBuilder, 
-  SlashCommandBuilder,
-  REST,
-  Routes
+  REST, 
+  Routes, 
+  SlashCommandBuilder 
 } = require('discord.js');
-const express = require('express'); // Para mantener el bot activo en Railway
-const app = express();
 
-// -------------------- SERVIDOR WEB PARA UPTIME --------------------
-app.get("/", (req, res) => res.send("Servidor NERV Bot activo"));
-app.listen(8080, () => console.log("🌐 Servidor web corriendo en puerto 8080"));
-
-// -------------------- CLIENTE DISCORD --------------------
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ],
-  partials: [Partials.Channel]
+    GatewayIntentBits.GuildMessages
+  ]
 });
 
-const SERVER_ID = '1490440780341448846';
-const LOG_CHANNEL = '1490581213159620659';
-const TICKET_CATEGORY = '1490462544798810173';
+console.log("🚀 Iniciando NERV Bot...");
 
-// Roles de staff
-const ROLES_STAFF = {
-  helper: '1490466913237602324',
-  mod: '1490466028545769473',
+const SERVER_ID = '1490440780341448846';
+const STAFF_LOG_CHANNEL = '1490581213159620659';
+
+// --------------------------
+// ROLES DEL STAFF Y PERMISOS
+// --------------------------
+const STAFF_ROLES = {
+  owner: '1490466019720822884',
   admin: '1490466026356342804',
-  owner: '1490466019720822884'
+  mod: '1490466028545769473',
+  helper: '1490466913237602324'
 };
 
-// Roles Tiers
+// --------------------------
+// ROLES TIERS
+// --------------------------
 const TIERS = [
-  { id: '1490563096610078862', nombre: 'Profesionales', rango: 'RLCS / Top 2 SSL-GrandChampion 3', emoji: '🏆' },
-  { id: '1490563098937921748', nombre: 'Competitivos', rango: 'SSL a GrandChampion 3', emoji: '⚡' },
-  { id: '1490563101479931964', nombre: 'Veteranos', rango: 'GrandChampion 2 a Champion 3', emoji: '🎯' },
-  { id: '1490563105736884325', nombre: 'Aspirantes', rango: 'Champion 2 a Diamond 3', emoji: '📈' },
-  { id: '1490563136783126710', nombre: 'En progreso', rango: 'Diamond 2 para abajo', emoji: '🔰' },
+  { id: '1490563096610078862', name: 'Profesionales', range: 'Jugador RLCS', emoji: '🏆', color: '#FFD700' },
+  { id: '1490563098937921748', name: 'Competitivos', range: 'SSL a Gran Champion 3', emoji: '⚡', color: '#1E90FF' },
+  { id: '1490563101479931964', name: 'Veteranos', range: 'Gran Champion 2 a Champion 3', emoji: '🎯', color: '#FF4500' },
+  { id: '1490563105736884325', name: 'Aspirantes', range: 'Champion 2 a Diamante 3', emoji: '📈', color: '#32CD32' },
+  { id: '1490563136783126710', name: 'En Progreso', range: 'Diamante 2 para abajo', emoji: '🔰', color: '#808080' }
 ];
 
-// -------------------- BIENVENIDA --------------------
+// --------------------------
+// WELCOME + AUTO-ROL
+// --------------------------
 client.on('guildMemberAdd', async member => {
   try {
-    const rolMiembro = member.guild.roles.cache.get('1490466327045869628');
+    const rolMiembro = member.guild.roles.cache.get('1490466327045869628'); 
     if (rolMiembro) await member.roles.add(rolMiembro);
 
     const canalBienvenida = member.guild.channels.cache.get('1490483811664924883');
@@ -65,140 +65,171 @@ client.on('guildMemberAdd', async member => {
         .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
         .setColor('#8A2BE2')
         .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' });
-      await canalBienvenida.send({ embeds: [embed] });
+
+      canalBienvenida.send({ embeds: [embed] });
     }
-  } catch(e) {
-    console.error('Error en bienvenida:', e);
+
+  } catch (error) {
+    console.error("❌ Error en bienvenida:", error);
   }
 });
 
-// -------------------- PANEL TIER / TRYOUTS --------------------
+// --------------------------
+// BOTÓN TIERS / TICKETS
+// --------------------------
 client.once('ready', async () => {
   console.log(`🔥 Bot listo como ${client.user.tag}`);
 
-  try {
-    const canalTiers = await client.channels.fetch('1490565371294650488');
-
-    // Mensaje Embed con los Tiers
-    const embed = new EmbedBuilder()
-      .setTitle('🎮 Postúlate a tu Tier')
-      .setDescription('Selecciona tu Tier para abrir un ticket de postulación. Lee los requisitos antes de postularte.')
-      .setColor('#8A2BE2');
-
-    TIERS.forEach(t => {
-      embed.addFields({ name: `${t.emoji} ${t.nombre}`, value: t.rango, inline: false });
+  // Crear role Muted si no existe
+  const guild = await client.guilds.fetch(SERVER_ID);
+  let mutedRole = guild.roles.cache.find(r => r.name === 'Muted');
+  if (!mutedRole) {
+    mutedRole = await guild.roles.create({
+      name: 'Muted',
+      color: '#555555',
+      permissions: []
     });
 
-    const row = new ActionRowBuilder().addComponents(
-      TIERS.map(t => new ButtonBuilder()
-        .setCustomId(`tier_${t.id}`)
-        .setLabel(t.nombre)
-        .setStyle(ButtonStyle.Primary)
-      )
-    );
-
-    await canalTiers.send({ embeds: [embed], components: [row] });
-  } catch(e) {
-    console.error('Error creando embed de Tiers:', e);
+    // Aplicar overwrites a todos los canales
+    guild.channels.cache.forEach(async ch => {
+      await ch.permissionOverwrites.edit(mutedRole, {
+        SendMessages: false,
+        AddReactions: false,
+        Speak: false
+      });
+    });
   }
 });
 
-// -------------------- CREAR TICKETS DE TIERS --------------------
+// --------------------------
+// INTERACTIONS (BOTONES + SLASH)
+// --------------------------
 client.on('interactionCreate', async interaction => {
-  if (!interaction.isButton()) return;
-
-  // Ticket por Tier
-  if (interaction.customId.startsWith('tier_')) {
+  // --------------------------
+  // BOTONES DE TIERS
+  // --------------------------
+  if (interaction.isButton()) {
     await interaction.deferReply({ ephemeral: true });
 
+    const tierClicked = TIERS.find(t => interaction.customId === `tier_${t.id}`);
+    if (!tierClicked) return;
+
     try {
-      const tierId = interaction.customId.replace('tier_', '');
-      const tierData = TIERS.find(t => t.id === tierId);
-
-      if (!tierData) return interaction.editReply({ content: '❌ Tier no encontrado.' });
-
-      const nombre = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
-
-      const permisoOverwrites = [
-        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
-        ...Object.values(ROLES_STAFF).map(rid => ({
-          id: rid,
-          allow: [PermissionsBitField.Flags.ViewChannel]
-        })),
-        { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageChannels] }
-      ];
+      const channelName = `tier-${interaction.user.username}`;
+      const category = interaction.guild.channels.cache.get('1490462544798810173'); // Categoría Tryouts
 
       const ticket = await interaction.guild.channels.create({
-        name: `tier-${nombre}`,
+        name: channelName,
         type: ChannelType.GuildText,
-        parent: TICKET_CATEGORY,
-        permissionOverwrites: permisoOverwrites
+        parent: category.id,
+        permissionOverwrites: [
+          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
+          { id: STAFF_ROLES.owner, allow: [PermissionsBitField.Flags.ViewChannel] },
+          { id: STAFF_ROLES.admin, allow: [PermissionsBitField.Flags.ViewChannel] },
+          { id: STAFF_ROLES.mod, allow: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.guild.members.me.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageChannels] }
+        ]
       });
 
       const embedTicket = new EmbedBuilder()
-        .setTitle(`📋 Postulación para ${tierData.nombre}`)
-        .setDescription(`Estas por postularte a **${tierData.nombre}**\nRequisitos: ${tierData.rango}\n\n**Rango actual:**\n**Prueba de temporada:**\n**ID del juego:**`)
-        .setColor('#00FFFF')
+        .setTitle(`Postulación para Tiers`)
+        .setDescription(`Estás por postularte al **${tierClicked.name}** (${tierClicked.range})\n\nPor favor indica tu rango actual y manda una prueba que verifique tu nivel de esta temporada junto con tu ID del juego.`)
+        .setColor(tierClicked.color)
         .setFooter({ text: '⚡ NERV - Compite, mejora y disfruta!' });
 
-      const cerrarRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('cerrar_ticket')
-          .setLabel('❌ Cerrar Ticket')
-          .setStyle(ButtonStyle.Danger)
+      const rowClose = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('❌ Cerrar Ticket').setStyle(ButtonStyle.Danger)
       );
 
-      await ticket.send({ embeds: [embedTicket], components: [cerrarRow] });
+      await ticket.send({ embeds: [embedTicket], components: [rowClose] });
       await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
-    } catch(e) {
-      console.error('Error creando ticket Tier:', e);
-      await interaction.editReply({ content: `❌ Error: ${e.message}` });
+
+    } catch (err) {
+      console.error(err);
+      await interaction.editReply({ content: '❌ Error creando ticket.' });
     }
   }
 
-  // Cerrar ticket
-  if (interaction.customId === 'cerrar_ticket') {
+  // --------------------------
+  // CERRAR TICKET
+  // --------------------------
+  if (interaction.isButton() && interaction.customId === 'cerrar_ticket') {
     await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
     setTimeout(() => interaction.channel.delete().catch(console.error), 2000);
   }
+
+  // --------------------------
+  // SLASH COMMANDS MODERACIÓN
+  // --------------------------
+  if (!interaction.isChatInputCommand()) return;
+
+  const { commandName, options, member } = interaction;
+  const logChannel = interaction.guild.channels.cache.get(STAFF_LOG_CHANNEL);
+
+  // Verificar permisos según rol
+  const userRoles = member.roles.cache;
+  const canWarn = userRoles.has(STAFF_ROLES.owner) || userRoles.has(STAFF_ROLES.admin) || userRoles.has(STAFF_ROLES.mod) || userRoles.has(STAFF_ROLES.helper);
+  const canMute = userRoles.has(STAFF_ROLES.owner) || userRoles.has(STAFF_ROLES.admin) || userRoles.has(STAFF_ROLES.mod) || userRoles.has(STAFF_ROLES.helper);
+  const canBan = userRoles.has(STAFF_ROLES.owner) || userRoles.has(STAFF_ROLES.admin) || userRoles.has(STAFF_ROLES.mod);
+
+  if (commandName === 'warn') {
+    if (!canWarn) return interaction.reply({ content: '❌ No tienes permiso.', ephemeral: true });
+    const user = options.getUser('usuario');
+    const razon = options.getString('razon');
+    const embed = new EmbedBuilder()
+      .setTitle('⚠️ Usuario Wardeado')
+      .setDescription(`${user.tag} ha recibido un **warn**\nRazón: ${razon}`)
+      .setColor('#FFA500')
+      .setTimestamp();
+    logChannel.send({ embeds: [embed] });
+    interaction.reply({ content: `✅ ${user.tag} advertido.` });
+  }
+
+  if (commandName === 'mute') {
+    if (!canMute) return interaction.reply({ content: '❌ No tienes permiso.', ephemeral: true });
+    const user = options.getMember('usuario');
+    const tiempo = options.getInteger('tiempo'); // en minutos
+    const razon = options.getString('razon');
+    const mutedRole = interaction.guild.roles.cache.find(r => r.name === 'Muted');
+    if (!mutedRole) return interaction.reply({ content: '❌ No se encontró rol Muted.' });
+
+    await user.roles.add(mutedRole);
+    interaction.reply({ content: `✅ ${user.user.tag} muteado por ${tiempo} minutos.` });
+
+    logChannel.send({ embeds: [new EmbedBuilder().setTitle('🔇 Usuario Muteado').setDescription(`${user.user.tag} muteado por ${tiempo} minutos\nRazón: ${razon}`).setColor('#FF4500').setTimestamp()] });
+
+    if (tiempo > 0) {
+      setTimeout(async () => {
+        await user.roles.remove(mutedRole).catch(console.error);
+        logChannel.send({ embeds: [new EmbedBuilder().setTitle('🔊 Usuario Desmuteado').setDescription(`${user.user.tag} ha sido desmuteado automáticamente.`).setColor('#00FF00').setTimestamp()] });
+      }, tiempo * 60000);
+    }
+  }
+
+  if (commandName === 'ban') {
+    if (!canBan) return interaction.reply({ content: '❌ No tienes permiso.', ephemeral: true });
+    const user = options.getMember('usuario');
+    const razon = options.getString('razon');
+    const tiempo = options.getInteger('tiempo'); // minutos, 0 = permaban
+
+    if (tiempo && tiempo > 0) {
+      await user.ban({ reason: razon });
+      interaction.reply({ content: `✅ ${user.user.tag} baneado temporalmente por ${tiempo} minutos.` });
+      setTimeout(async () => {
+        await interaction.guild.members.unban(user.id).catch(() => {});
+        logChannel.send({ embeds: [new EmbedBuilder().setTitle('♻️ Usuario Desbaneado').setDescription(`${user.user.tag} desbaneado automáticamente.`).setColor('#00FF00').setTimestamp()] });
+      }, tiempo * 60000);
+    } else {
+      await user.ban({ reason: razon });
+      interaction.reply({ content: `✅ ${user.user.tag} baneado permanentemente.` });
+    }
+
+    logChannel.send({ embeds: [new EmbedBuilder().setTitle('⛔ Usuario Baneado').setDescription(`${user.user.tag} ha sido baneado.\nRazón: ${razon}`).setColor('#FF0000').setTimestamp()] });
+  }
 });
 
-// -------------------- COMANDOS DE MODERACION --------------------
-const { Collection } = require('discord.js');
-client.commands = new Collection();
-
-const commands = [
-  new SlashCommandBuilder()
-    .setName('warn')
-    .setDescription('Dar un warn a un usuario')
-    .addUserOption(opt => opt.setName('usuario').setDescription('Usuario a sancionar').setRequired(true))
-    .addStringOption(opt => opt.setName('razon').setDescription('Razón del warn').setRequired(true)),
-  new SlashCommandBuilder()
-    .setName('mute')
-    .setDescription('Silenciar a un usuario')
-    .addUserOption(opt => opt.setName('usuario').setDescription('Usuario a silenciar').setRequired(true))
-    .addIntegerOption(opt => opt.setName('tiempo').setDescription('Tiempo en minutos')),
-  new SlashCommandBuilder()
-    .setName('ban')
-    .setDescription('Banea a un usuario')
-    .addUserOption(opt => opt.setName('usuario').setDescription('Usuario a banear').setRequired(true))
-    .addStringOption(opt => opt.setName('razon').setDescription('Razón del ban').setRequired(true))
-];
-
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
-(async () => {
-  try {
-    console.log('🚀 Registrando comandos de moderación...');
-    await rest.put(
-      Routes.applicationGuildCommands('1490451848442941480', SERVER_ID),
-      { body: commands }
-    );
-    console.log('✅ Comandos registrados');
-  } catch(e) {
-    console.error(e);
-  }
-})();
-
-// -------------------- LOGIN --------------------
+// --------------------------
+// LOGIN BOT
+// --------------------------
 client.login(process.env.DISCORD_TOKEN);
