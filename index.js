@@ -155,8 +155,7 @@ client.on('interactionCreate', async interaction => {
 // --------------------------
 // SISTEMA DE MODERACIÓN
 // --------------------------
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v10');
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 const commands = [
   new SlashCommandBuilder().setName('warn').setDescription('Dar un warn').addUserOption(opt=>opt.setName('usuario').setDescription('Usuario a advertir').setRequired(true)).addStringOption(opt=>opt.setName('razon').setDescription('Razón').setRequired(true)),
@@ -164,7 +163,6 @@ const commands = [
   new SlashCommandBuilder().setName('ban').setDescription('Banear usuario').addUserOption(opt=>opt.setName('usuario').setDescription('Usuario a banear').setRequired(true)).addStringOption(opt=>opt.setName('razon').setDescription('Razón').setRequired(true))
 ].map(c=>c.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 (async ()=>{ await rest.put(Routes.applicationCommands('1490451848442941480'), { body: commands }); })();
 
 // --------------------------
