@@ -4,12 +4,10 @@ const {
   ActionRowBuilder, 
   ButtonBuilder, 
   ButtonStyle, 
-  ChannelType, 
-  PermissionsBitField, 
-  EmbedBuilder, 
+  ModalBuilder, 
   TextInputBuilder, 
   TextInputStyle, 
-  ModalBuilder 
+  EmbedBuilder 
 } = require('discord.js');
 
 const client = new Client({
@@ -107,16 +105,12 @@ client.once('ready', async () => {
 // INTERACCIONES BOTONES + MODALES
 // --------------------------
 const tierData = {
-  tier1: { nombre: 'Profesionales', requisitos: 'Jugador RLCS', opciones: ['Player RLCS'], rolId: '1490563096610078862' },
-  tier2: { nombre: 'Competitivos', requisitos: 'SSL → Grand Champion 3', opciones: ['SSL', 'Grand Champion 3'], rolId: '1490563098937921748' },
-  tier3: { nombre: 'Veteranos', requisitos: 'Grand Champion 2 → Champion 3', opciones: ['Grand Champion 2', 'Grand Champion 1', 'Champion 3'], rolId: '1490563101479931964' },
-  tier4: { nombre: 'Aspirantes', requisitos: 'Champion 2 → Diamond 3', opciones: ['Champion 2', 'Champion 1', 'Diamond 3'], rolId: '1490563105736884325' },
-  tier5: { nombre: 'En progreso', requisitos: 'Diamond 2 → Bronze 1', opciones: ['Diamond 2','Diamond 1','Platino 3','Platino 2','Platino 1','Oro 3','Oro 2','Oro 1','Rangos inferiores'], rolId: '1490563136783126710' }
+  tier1: { nombre: 'Profesionales', requisitos: 'Jugador RLCS', opciones: ['Player RLCS'], rolId: null },
+  tier2: { nombre: 'Competitivos', requisitos: 'SSL → Grand Champion 3', opciones: ['SSL', 'Grand Champion 3'], rolId: null },
+  tier3: { nombre: 'Veteranos', requisitos: 'Grand Champion 2 → Champion 3', opciones: ['Grand Champion 2', 'Grand Champion 1', 'Champion 3'], rolId: null },
+  tier4: { nombre: 'Aspirantes', requisitos: 'Champion 2 → Diamond 3', opciones: ['Champion 2', 'Champion 1', 'Diamond 3'], rolId: null },
+  tier5: { nombre: 'En progreso', requisitos: 'Diamond 2 → Bronze 1', opciones: ['Diamond 2','Diamond 1','Platino 3','Platino 2','Platino 1','Oro 3','Oro 2','Oro 1','Rangos inferiores'], rolId: null }
 };
-
-const fs = require('fs');
-let warns = {};
-try { warns = JSON.parse(fs.readFileSync('./warns.json', 'utf-8')); } catch { warns = {}; }
 
 client.on('interactionCreate', async interaction => {
   if (interaction.isButton()) {
@@ -145,7 +139,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     // TIERS
-    if (Object.keys(tierData).includes(interaction.customId)) {
+    if (tierData[interaction.customId]) {
       const tier = tierData[interaction.customId];
       const modal = new ModalBuilder()
         .setCustomId(`tier_modal_${interaction.customId}`)
@@ -206,109 +200,8 @@ client.on('interactionCreate', async interaction => {
       const canalTryouts = interaction.guild.channels.cache.get('1490462544798810173');
       await canalTryouts.send({ embeds: [embed] });
 
-      // Asignar rol del tier
-      const rolTier = interaction.guild.roles.cache.get(tier.rolId);
-      if (rolTier) await interaction.member.roles.add(rolTier);
-
       await interaction.reply({ content: '✅ Tu postulación fue enviada correctamente!', ephemeral: true });
     }
-  }
-});
-
-// --------------------------
-// MODERACIÓN
-// --------------------------
-const staffLogChannelId = '1490581213159620659';
-const mutedRoleId = '1490587338697609257';
-
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const { commandName, options, member, guild } = interaction;
-
-  // WARN
-  if (commandName === 'warn') {
-    const usuario = options.getUser('usuario');
-    const razon = options.getString('razon') || 'No especificada';
-
-    if (!warns[usuario.id]) warns[usuario.id] = [];
-    warns[usuario.id].push({ razon, fecha: new Date().toISOString() });
-    fs.writeFileSync('./warns.json', JSON.stringify(warns, null, 2));
-
-    const embed = new EmbedBuilder()
-      .setTitle('⚠️ Usuario Wardeado')
-      .setColor('#FFA500')
-      .addFields(
-        { name: 'Usuario', value: `<@${usuario.id}>`, inline: true },
-        { name: 'Moderador', value: `<@${member.id}>`, inline: true },
-        { name: 'Razón', value: razon, inline: false },
-        { name: 'Total Warns', value: `${warns[usuario.id].length}`, inline: true }
-      )
-      .setTimestamp();
-
-    const logChannel = guild.channels.cache.get(staffLogChannelId);
-    if (logChannel) await logChannel.send({ embeds: [embed] });
-
-    await interaction.reply({ content: `✅ <@${usuario.id}> ha sido wardeado.`, ephemeral: true });
-  }
-
-  // MUTE
-  if (commandName === 'mute') {
-    const usuario = options.getMember('usuario');
-    const razon = options.getString('razon') || 'No especificada';
-    const tiempo = options.getInteger('tiempo') || 0;
-
-    const rolMuted = guild.roles.cache.get(mutedRoleId);
-    if (!rolMuted) return interaction.reply({ content: '❌ No se encontró el rol Muted.', ephemeral: true });
-
-    await usuario.roles.add(rolMuted);
-
-    const embed = new EmbedBuilder()
-      .setTitle('🔇 Usuario Muted')
-      .setColor('#FF0000')
-      .addFields(
-        { name: 'Usuario', value: `<@${usuario.id}>`, inline: true },
-        { name: 'Moderador', value: `<@${member.id}>`, inline: true },
-        { name: 'Razón', value: razon, inline: false },
-        { name: 'Tiempo', value: `${tiempo} min`, inline: true }
-      )
-      .setTimestamp();
-
-    const logChannel = guild.channels.cache.get(staffLogChannelId);
-    if (logChannel) await logChannel.send({ embeds: [embed] });
-
-    await interaction.reply({ content: `✅ <@${usuario.id}> ha sido muted.`, ephemeral: true });
-
-    if (tiempo > 0) {
-      setTimeout(async () => {
-        if (usuario.roles.cache.has(rolMuted.id)) await usuario.roles.remove(rolMuted);
-      }, tiempo * 60 * 1000);
-    }
-  }
-
-  // UNMUTE
-  if (commandName === 'unmute') {
-    const usuario = options.getMember('usuario');
-    const rolMuted = guild.roles.cache.get(mutedRoleId);
-    if (!rolMuted) return interaction.reply({ content: '❌ No se encontró el rol Muted.', ephemeral: true });
-
-    await usuario.roles.remove(rolMuted);
-    await interaction.reply({ content: `✅ <@${usuario.id}> ha sido desmuted.`, ephemeral: true });
-  }
-
-  // BAN
-  if (commandName === 'ban') {
-    const usuario = options.getUser('usuario');
-    const razon = options.getString('razon') || 'No especificada';
-    await guild.members.ban(usuario, { reason: razon });
-    await interaction.reply({ content: `✅ <@${usuario.id}> ha sido baneado.`, ephemeral: true });
-  }
-
-  // UNBAN
-  if (commandName === 'unban') {
-    const usuarioId = options.getString('usuario_id');
-    await guild.members.unban(usuarioId);
-    await interaction.reply({ content: `✅ Usuario con ID ${usuarioId} ha sido desbaneado.`, ephemeral: true });
   }
 });
 
