@@ -1,9 +1,7 @@
-// --------------------------
-// IMPORTS
-// --------------------------
 const { 
   Client, 
   GatewayIntentBits, 
+  Partials,
   ActionRowBuilder, 
   ButtonBuilder, 
   ButtonStyle, 
@@ -11,75 +9,81 @@ const {
   PermissionsBitField, 
   EmbedBuilder, 
   REST, 
-  Routes, 
-  SlashCommandBuilder 
+  Routes
 } = require('discord.js');
+require('dotenv').config();
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
-});
+const TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID = '1490451848442941480';
+const GUILD_ID = '1490440780341448846';
 
 // --------------------------
-// VARIABLES DE ROLES / CANALES
+// CONFIG DE CANALES Y ROLES
 // --------------------------
-const MEMBER_ROLE_ID = '1490466327045869628';
-const WELCOME_CHANNEL_ID = '1490483811664924883';
-const TRYOUT_CATEGORY_ID = '1490462544798810173';
-const APPLY_CHANNEL_ID = '1490462939361312941';
-const BOT_ROLE_ID = '1490472100304257175';
-
-// Staff roles
-const STAFF_ROLES = {
-  owner: '1490466019720822884',
-  admin: '1490466026356342804',
-  mod: '1490466028545769473',
-  helper: '1490466913237602324'
+const IDs = {
+  rolMiembro: '1490466327045869628',
+  canalBienvenida: '1490483811664924883',
+  canalReglas: '1490450067860230235',
+  canalTiers: '1490565371294650488',
+  categoriaTryouts: '1490462544798810173',
+  rolesStaff: {
+    owner: '1490466019720822884',
+    admin: '1490466026356342804',
+    mod: '1490466028545769473',
+    helper: '1490466913237602324'
+  },
+  rolBot: '1490472100304257175'
 };
 
 // --------------------------
-// BIENVENIDA + AUTO-ROL
+// CLIENTE
+// --------------------------
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  partials: [Partials.Channel]
+});
+
+console.log("🚀 Iniciando NERV Bot...");
+
+// --------------------------
+// AUTO-ROL MIEMBRO + BIENVENIDA
 // --------------------------
 client.on('guildMemberAdd', async member => {
   try {
-    const rolMiembro = member.guild.roles.cache.get(MEMBER_ROLE_ID);
+    // Dar rol Miembro
+    const rolMiembro = member.guild.roles.cache.get(IDs.rolMiembro); 
     if (rolMiembro) await member.roles.add(rolMiembro);
 
-    const canalBienvenida = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    // Embed de bienvenida
+    const canalBienvenida = member.guild.channels.cache.get(IDs.canalBienvenida);
     if (canalBienvenida) {
       const embedBienvenida = new EmbedBuilder()
         .setTitle('🎉 ¡Bienvenido a NERV! ⚡')
-        .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Revisa estos links importantes:`)
+        .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Lee las reglas y consulta los tiers en los siguientes canales:`)
         .addFields(
-          { name: 'Reglas', value: '[Haz clic aquí](https://tulink1.com)', inline: true },
-          { name: 'Canales', value: '[Haz clic aquí](https://tulink2.com)', inline: true },
-          { name: 'Roles', value: '[Haz clic aquí](https://tulink3.com)', inline: true }
+          { name: '📜 Reglas', value: `<#${IDs.canalReglas}>`, inline: true },
+          { name: '🌟 Tiers', value: `<#${IDs.canalTiers}>`, inline: true }
         )
-        .setColor('#8A2BE2')
         .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
-        .setImage('https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png')
-        .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' })
-        .setTimestamp();
+        .setColor('#8A2BE2')
+        .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' });
 
       await canalBienvenida.send({ embeds: [embedBienvenida] });
     }
+
   } catch (error) {
-    console.error("❌ Error bienvenida:", error);
+    console.error("❌ Error al asignar rol o enviar bienvenida:", error);
   }
 });
 
 // --------------------------
-// PANEL DE TRYOUTS
+// PANEL TRYOUTS
 // --------------------------
 client.once('ready', async () => {
   console.log(`🔥 Bot listo como ${client.user.tag}`);
 
   try {
-    const canalApplys = await client.channels.fetch(APPLY_CHANNEL_ID);
+    const canalApplys = await client.channels.fetch('1490462939361312941'); // Canal Applys
     const mensajes = await canalApplys.messages.fetch({ limit: 1 });
 
     if (mensajes.size === 0) {
@@ -95,36 +99,61 @@ client.once('ready', async () => {
         components: [botonRow]
       });
     }
+
+    // Panel de tiers (solo botones)
+    const canalTiers = await client.channels.fetch(IDs.canalTiers);
+    const mensajesTiers = await canalTiers.messages.fetch({ limit: 1 });
+    if (mensajesTiers.size === 0) {
+      const tiersRow = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder().setCustomId('tier1').setLabel('Tier 1').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId('tier2').setLabel('Tier 2').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId('tier3').setLabel('Tier 3').setStyle(ButtonStyle.Primary)
+        );
+
+      await canalTiers.send({ content: '🌟 Escoge tu tier:', components: [tiersRow] });
+    }
+
   } catch (error) {
-    console.error("❌ Error panel tryouts:", error);
+    console.error("❌ Error panel:", error);
   }
 });
 
 // --------------------------
-// INTERACCIONES (BOTONES Y TICKETS)
+// SISTEMA DE TICKETS
 // --------------------------
 client.on('interactionCreate', async interaction => {
   if (interaction.isButton()) {
-    // CREAR TICKET
+
+    // ----- CREAR TICKET -----
     if (interaction.customId === 'crear_ticket') {
       await interaction.deferReply({ ephemeral: true });
+
       try {
         const nombre = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
-        const categoria = interaction.guild.channels.cache.get(TRYOUT_CATEGORY_ID);
+        const categoria = interaction.guild.channels.cache.get(IDs.categoriaTryouts);
+        if (!categoria) throw new Error("Categoría de tickets no encontrada.");
+
+        const botPerm = categoria.permissionsFor(interaction.guild.members.me);
+        if (!botPerm.has(PermissionsBitField.Flags.ManageChannels)) throw new Error("Bot sin permisos.");
 
         const rolesParaVer = [
-          STAFF_ROLES.owner,
-          STAFF_ROLES.admin,
-          STAFF_ROLES.mod
+          IDs.rolesStaff.owner,
+          IDs.rolesStaff.admin,
+          IDs.rolesStaff.mod
         ].map(id => interaction.guild.roles.cache.get(id))
-          .filter(role => role)
+          .filter(r => r)
           .map(role => ({ id: role.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
 
         const permisoOverwrites = [
           { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
           { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
           ...rolesParaVer,
-          { id: BOT_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageChannels] }
+          { id: IDs.rolBot, allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ManageChannels
+          ]}
         ];
 
         const ticket = await interaction.guild.channels.create({
@@ -136,41 +165,65 @@ client.on('interactionCreate', async interaction => {
 
         const embedTicket = new EmbedBuilder()
           .setTitle(`🎯 Tryout de ${interaction.user.username}`)
-          .setDescription("Responde estas preguntas:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?")
+          .setDescription("Responde las preguntas dentro de este ticket:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?")
           .setColor('#00FFFF')
           .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
           .setFooter({ text: '⚡ NERV - Compite, mejora y disfruta!' });
 
         const cerrarRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('cerrar_ticket')
-            .setLabel('❌ Cerrar Ticket')
-            .setStyle(ButtonStyle.Danger)
+          new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('❌ Cerrar Ticket').setStyle(ButtonStyle.Danger)
         );
 
         await ticket.send({ embeds: [embedTicket], components: [cerrarRow] });
         await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
+
       } catch (error) {
-        console.error("❌ Error ticket:", error);
+        console.error("❌ ERROR REAL:", error);
         await interaction.editReply({ content: `❌ Error creando el ticket: ${error.message}` });
       }
     }
 
-    // CERRAR TICKET
+    // ----- CERRAR TICKET -----
     if (interaction.customId === 'cerrar_ticket') {
       await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
-      setTimeout(() => {
-        interaction.channel.delete().catch(console.error);
-      }, 2000);
+      setTimeout(() => interaction.channel.delete().catch(console.error), 2000);
     }
+
   }
 
-  // --------------------------
-  // AQUÍ PODEMOS AGREGAR LOS COMANDOS SLASH (tiers, warn, mute, ping, etc.)
-  // --------------------------
+  // ----- COMANDOS SLASH -----
+  if (interaction.isChatInputCommand()) {
+    const { commandName } = interaction;
+
+    // /ping
+    if (commandName === 'ping') {
+      await interaction.reply({ content: '🏓 Pong!', ephemeral: true });
+    }
+
+    // Los comandos de moderación (/warn, /mute, /ban) deben estar ya en otra parte
+    // y usan IDs de staff como antes
+  }
 });
 
 // --------------------------
-// LOGIN
+// REGISTRAR COMANDOS SLASH
 // --------------------------
-client.login(process.env.DISCORD_TOKEN);
+const commands = [
+  { name: 'ping', description: 'Comprueba si el bot está online' }
+];
+
+const rest = new REST({ version: '10' }).setToken(TOKEN);
+(async () => {
+  try {
+    console.log('⚙ Registrando comandos slash...');
+    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
+    console.log('✅ Comandos slash registrados');
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
+// --------------------------
+// LOGIN BOT
+// --------------------------
+client.login(TOKEN);
