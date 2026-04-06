@@ -1,154 +1,223 @@
 // index.js
-const { Client, GatewayIntentBits, Partials, Collection, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, REST, Routes, SlashCommandBuilder } = require('discord.js');
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ],
-    partials: [Partials.Channel]
-});
 require('dotenv').config();
+const { Client, GatewayIntentBits, Partials, PermissionsBitField, Collection, EmbedBuilder } = require('discord.js');
+const express = require('express');
 
-// --- IDS que me diste ---
-const GUILD_ID = '1490440780341448846';
-const WELCOME_CHANNEL_ID = 'TU_CANAL_DE_BIENVENIDA'; // reemplaza con el canal real si quieres
-const STAFF_LOG_CHANNEL = '1490581213159620659';
-const CLIENT_ID = '1490451848442941480';
-
-// Roles staff
-const STAFF_ROLES = {
+// --------------------
+// CONFIG
+// --------------------
+const TOKEN = process.env.DISCORD_TOKEN;
+const GUILD_ID = '1490440780341448846'; // tu server
+const STAFF_LOG_CHANNEL = '1490581213159620659'; // canal para logs
+const WELCOME_CHANNEL = 'TU_WELCOME_CHANNEL_ID'; // reemplaza por tu canal de bienvenida
+const STAFF_IDS = {
     owner: '1490466019720822884',
     admin: '1490466026356342804',
     mod: '1490466028545769473',
     helper: '1490466913237602324'
 };
+const ROLES = {
+    muted: 'Muted',
+    member: 'Member'
+};
 
-// Roles automáticos
-const MEMBER_ROLE_NAME = 'Miembro';
-const MUTED_ROLE_NAME = 'Muted';
+// --------------------
+// CLIENT
+// --------------------
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    partials: [Partials.Channel, Partials.Message]
+});
 
-// --- Comandos ---
+client.commands = new Collection();
+
+// --------------------
+// UPTIME ROBOT SERVER
+// --------------------
+const app = express();
+app.get('/', (req, res) => res.send('Bot is alive!'));
+app.listen(process.env.PORT || 8080, () => console.log('🌐 Servidor web corriendo'));
+
+// --------------------
+// READY EVENT
+// --------------------
+client.once('ready', async () => {
+    console.log(`🔥 Bot listo como ${client.user.tag}`);
+
+    // crear roles si no existen
+    const guild = await client.guilds.fetch(GUILD_ID);
+    for (const roleName of Object.values(ROLES)) {
+        if (!guild.roles.cache.find(r => r.name === roleName)) {
+            await guild.roles.create({ name: roleName, permissions: [] });
+            console.log(`✅ Rol creado: ${roleName}`);
+        }
+    }
+});
+
+// --------------------
+// WELCOME + AUTOROL
+// --------------------
+client.on('guildMemberAdd', async member => {
+    const guild = member.guild;
+    const role = guild.roles.cache.find(r => r.name === ROLES.member);
+    if (role) await member.roles.add(role);
+
+    const channel = guild.channels.cache.get(WELCOME_CHANNEL);
+    if (channel) {
+        channel.send(`🎉 Bienvenido ${member.user} al servidor! Te hemos dado el rol de ${ROLES.member}.`);
+    }
+});
+
+// --------------------
+// SLASH COMMANDS REGISTRATION
+// --------------------
+const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+
 const commands = [
-    new SlashCommandBuilder().setName('ping').setDescription('Comprueba si el bot está activo'),
-    new SlashCommandBuilder().setName('warn').setDescription('Dar un warn a un usuario')
-        .addUserOption(o => o.setName('usuario').setDescription('Usuario a advertir').setRequired(true))
-        .addStringOption(o => o.setName('razon').setDescription('Razón del warn').setRequired(true)),
-    new SlashCommandBuilder().setName('mute').setDescription('Silenciar a un usuario')
-        .addUserOption(o => o.setName('usuario').setDescription('Usuario a mutear').setRequired(true))
-        .addStringOption(o => o.setName('duracion').setDescription('Duración del mute (ej: 10m, 1h)').setRequired(true)),
-    new SlashCommandBuilder().setName('ban').setDescription('Banea a un usuario')
-        .addUserOption(o => o.setName('usuario').setDescription('Usuario a banear').setRequired(true))
-        .addStringOption(o => o.setName('razon').setDescription('Razón del baneo').setRequired(true)),
-    new SlashCommandBuilder().setName('kick').setDescription('Expulsa a un usuario')
-        .addUserOption(o => o.setName('usuario').setDescription('Usuario a expulsar').setRequired(true))
-        .addStringOption(o => o.setName('razon').setDescription('Razón de la expulsión').setRequired(true)),
-].map(cmd => cmd.toJSON());
+    new SlashCommandBuilder().setName('ping').setDescription('Revisa si el bot responde'),
+    new SlashCommandBuilder().setName('tiers').setDescription('Muestra los tiers'),
+    new SlashCommandBuilder()
+        .setName('warn')
+        .setDescription('Da un warn a un usuario')
+        .addUserOption(option => option.setName('usuario').setDescription('Usuario a advertir').setRequired(true))
+        .addStringOption(option => option.setName('razon').setDescription('Razón').setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('mute')
+        .setDescription('Mutea a un usuario')
+        .addUserOption(option => option.setName('usuario').setDescription('Usuario a mutear').setRequired(true))
+        .addStringOption(option => option.setName('duracion').setDescription('Duración (ej: 10m, 1h)').setRequired(true))
+        .addStringOption(option => option.setName('razon').setDescription('Razón').setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('ban')
+        .setDescription('Banea a un usuario')
+        .addUserOption(option => option.setName('usuario').setDescription('Usuario a banear').setRequired(true))
+        .addStringOption(option => option.setName('duracion').setDescription('Duración (ej: 1d, perma)').setRequired(true))
+        .addStringOption(option => option.setName('razon').setDescription('Razón').setRequired(true)),
+    new SlashCommandBuilder().setName('apply').setDescription('Aplicar a tryouts'),
+    new SlashCommandBuilder().setName('tryouts').setDescription('Comandos de tryouts')
+].map(command => command.toJSON());
 
-// --- Registrar comandos ---
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+const rest = new REST({ version: '10' }).setToken(TOKEN);
+
 (async () => {
     try {
-        console.log('🔄 Registrando comandos...');
-        await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-        console.log('✅ Comandos registrados!');
+        console.log('🚀 Registrando slash commands...');
+        await rest.put(Routes.applicationGuildCommands(client.user?.id || '0', GUILD_ID), { body: commands });
+        console.log('✅ Slash commands registrados');
     } catch (err) {
         console.error(err);
     }
 })();
 
-// --- Inicio del bot ---
-client.once('ready', async () => {
-    console.log(`🔥 Bot listo como ${client.user.tag}`);
-
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const roles = await guild.roles.fetch();
-
-    // Crear roles automáticos si no existen
-    if (!roles.find(r => r.name === MUTED_ROLE_NAME)) await guild.roles.create({ name: MUTED_ROLE_NAME, color: 'GREY', reason: 'Rol de muteo automático' });
-    if (!roles.find(r => r.name === MEMBER_ROLE_NAME)) await guild.roles.create({ name: MEMBER_ROLE_NAME, color: 'BLUE', reason: 'Rol de miembros' });
-});
-
-// --- Bienvenida + autorol ---
-client.on(Events.GuildMemberAdd, async member => {
-    const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-    if (channel) channel.send(`Bienvenido/a ${member} al servidor! 🎉`);
-
-    const memberRole = member.guild.roles.cache.find(r => r.name === MEMBER_ROLE_NAME);
-    if (memberRole) await member.roles.add(memberRole).catch(console.error);
-});
-
-// --- Manejo de comandos ---
-client.on(Events.InteractionCreate, async interaction => {
+// --------------------
+// INTERACTION CREATE
+// --------------------
+client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
-    const { commandName, options } = interaction;
 
-    const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
+    const { commandName } = interaction;
 
-    if (commandName === 'ping') await interaction.reply({ content: '🏓 Pong!', ephemeral: true });
-
-    if (commandName === 'warn') {
-        const user = options.getUser('usuario');
-        const reason = options.getString('razon');
-        await interaction.reply(`⚠️ ${user.tag} ha recibido un warn. Razón: ${reason}`);
-        logChannel.send(`**WARN**: ${user.tag} | ${interaction.user.tag} | Razón: ${reason}`);
+    // ----------------
+    // PING
+    // ----------------
+    if (commandName === 'ping') {
+        await interaction.reply('🏓 Pong!');
     }
 
-    if (commandName === 'mute') {
-        const user = options.getUser('usuario');
-        const duration = options.getString('duracion');
-        const guildMember = await interaction.guild.members.fetch(user.id);
-        const muteRole = interaction.guild.roles.cache.find(r => r.name === MUTED_ROLE_NAME);
-        if (!muteRole) return interaction.reply({ content: 'No existe el rol Muted', ephemeral: true });
-
-        await guildMember.roles.add(muteRole).catch(console.error);
-        await interaction.reply(`🔇 ${user.tag} ha sido muteado por ${duration}`);
-        logChannel.send(`**MUTE**: ${user.tag} | ${interaction.user.tag} | Duración: ${duration}`);
+    // ----------------
+    // TIERS
+    // ----------------
+    else if (commandName === 'tiers') {
+        await interaction.reply('💎 Aquí están los tiers...');
     }
 
-    if (commandName === 'ban') {
-        const user = options.getUser('usuario');
-        const reason = options.getString('razon');
-        const guildMember = await interaction.guild.members.fetch(user.id);
-        await guildMember.ban({ reason }).catch(console.error);
-        await interaction.reply(`⛔ ${user.tag} ha sido baneado. Razón: ${reason}`);
-        logChannel.send(`**BAN**: ${user.tag} | ${interaction.user.tag} | Razón: ${reason}`);
+    // ----------------
+    // WARN
+    // ----------------
+    else if (commandName === 'warn') {
+        const target = interaction.options.getUser('usuario');
+        const reason = interaction.options.getString('razon');
+
+        if (!Object.values(STAFF_IDS).includes(interaction.user.id)) {
+            return interaction.reply({ content: '❌ No tienes permisos', ephemeral: true });
+        }
+
+        const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
+        if (logChannel) logChannel.send(`⚠️ ${interaction.user.tag} le dio un WARN a ${target.tag}. Razón: ${reason}`);
+
+        await interaction.reply({ content: `✅ ${target.tag} ha sido advertido.` });
     }
 
-    if (commandName === 'kick') {
-        const user = options.getUser('usuario');
-        const reason = options.getString('razon');
-        const guildMember = await interaction.guild.members.fetch(user.id);
-        await guildMember.kick(reason).catch(console.error);
-        await interaction.reply(`👢 ${user.tag} ha sido expulsado. Razón: ${reason}`);
-        logChannel.send(`**KICK**: ${user.tag} | ${interaction.user.tag} | Razón: ${reason}`);
+    // ----------------
+    // MUTE
+    // ----------------
+    else if (commandName === 'mute') {
+        const target = interaction.options.getUser('usuario');
+        const duration = interaction.options.getString('duracion');
+        const reason = interaction.options.getString('razon');
+
+        if (!Object.values(STAFF_IDS).includes(interaction.user.id)) {
+            return interaction.reply({ content: '❌ No tienes permisos', ephemeral: true });
+        }
+
+        const guild = interaction.guild;
+        const member = guild.members.cache.get(target.id);
+        const mutedRole = guild.roles.cache.find(r => r.name === ROLES.muted);
+
+        if (member && mutedRole) {
+            await member.roles.add(mutedRole);
+
+            const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
+            if (logChannel) logChannel.send(`🔇 ${interaction.user.tag} muteó a ${target.tag} por ${reason} (${duration})`);
+
+            await interaction.reply({ content: `✅ ${target.tag} ha sido muteado por ${duration}.` });
+        } else {
+            await interaction.reply({ content: '❌ No se pudo mutear al usuario.', ephemeral: true });
+        }
+    }
+
+    // ----------------
+    // BAN
+    // ----------------
+    else if (commandName === 'ban') {
+        const target = interaction.options.getUser('usuario');
+        const duration = interaction.options.getString('duracion');
+        const reason = interaction.options.getString('razon');
+
+        if (![STAFF_IDS.owner, STAFF_IDS.admin, STAFF_IDS.mod].includes(interaction.user.id)) {
+            return interaction.reply({ content: '❌ No tienes permisos', ephemeral: true });
+        }
+
+        const guild = interaction.guild;
+        const member = guild.members.cache.get(target.id);
+        if (member) {
+            await member.ban({ reason: reason });
+
+            const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
+            if (logChannel) logChannel.send(`⛔ ${interaction.user.tag} baneó a ${target.tag} por ${reason} (${duration})`);
+
+            await interaction.reply({ content: `✅ ${target.tag} ha sido baneado.` });
+        } else {
+            await interaction.reply({ content: '❌ No se pudo banear al usuario.', ephemeral: true });
+        }
+    }
+
+    // ----------------
+    // APPLY
+    // ----------------
+    else if (commandName === 'apply') {
+        await interaction.reply('📩 Gracias por aplicar! Nuestro staff revisará tu solicitud.');
+    }
+
+    // ----------------
+    // TRYOUTS
+    // ----------------
+    else if (commandName === 'tryouts') {
+        await interaction.reply('🎯 Comandos de tryouts activados.');
     }
 });
 
-// --- Botones Tiers + Tryouts ---
-client.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isButton()) return;
-
-    const tierData = {
-        t1: { name: 'Profesionales', emoji: '🏆', requirement: 'Top 2 SSL - Grand Champion 3' },
-        t2: { name: 'Competitivos', emoji: '⚡', requirement: 'Grand Champion 3' },
-        t3: { name: 'Veteranos', emoji: '🎯', requirement: 'Grand Champion 2 a Champion 3' },
-        t4: { name: 'Aspirantes', emoji: '📈', requirement: 'Champion 2 a Diamond 3' },
-        t5: { name: 'En Progreso', emoji: '🔰', requirement: 'Diamond 2 para abajo' }
-    };
-
-    if (tierData[interaction.customId]) {
-        const tier = tierData[interaction.customId];
-        await interaction.reply({
-            embeds: [{
-                title: 'Postulación para Tiers',
-                description: `Estás por postularte al tier **${tier.name}** ${tier.emoji}\nRequisitos: ${tier.requirement}\nPor favor indica tu rango actual y tu ID del juego.`,
-                color: 0x00FF00
-            }],
-            ephemeral: true
-        });
-    }
-});
-
-client.login(process.env.DISCORD_TOKEN);
+// --------------------
+// LOGIN
+// --------------------
+client.login(TOKEN);
