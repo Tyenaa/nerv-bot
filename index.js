@@ -1,223 +1,176 @@
-// index.js
-require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, PermissionsBitField, Collection, EmbedBuilder } = require('discord.js');
-const express = require('express');
+// --------------------------
+// IMPORTS
+// --------------------------
+const { 
+  Client, 
+  GatewayIntentBits, 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  ChannelType, 
+  PermissionsBitField, 
+  EmbedBuilder, 
+  REST, 
+  Routes, 
+  SlashCommandBuilder 
+} = require('discord.js');
 
-// --------------------
-// CONFIG
-// --------------------
-const TOKEN = process.env.DISCORD_TOKEN;
-const GUILD_ID = '1490440780341448846'; // tu server
-const STAFF_LOG_CHANNEL = '1490581213159620659'; // canal para logs
-const WELCOME_CHANNEL = 'TU_WELCOME_CHANNEL_ID'; // reemplaza por tu canal de bienvenida
-const STAFF_IDS = {
-    owner: '1490466019720822884',
-    admin: '1490466026356342804',
-    mod: '1490466028545769473',
-    helper: '1490466913237602324'
-};
-const ROLES = {
-    muted: 'Muted',
-    member: 'Member'
-};
-
-// --------------------
-// CLIENT
-// --------------------
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
-    partials: [Partials.Channel, Partials.Message]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
 });
 
-client.commands = new Collection();
+// --------------------------
+// VARIABLES DE ROLES / CANALES
+// --------------------------
+const MEMBER_ROLE_ID = '1490466327045869628';
+const WELCOME_CHANNEL_ID = '1490483811664924883';
+const TRYOUT_CATEGORY_ID = '1490462544798810173';
+const APPLY_CHANNEL_ID = '1490462939361312941';
+const BOT_ROLE_ID = '1490472100304257175';
 
-// --------------------
-// UPTIME ROBOT SERVER
-// --------------------
-const app = express();
-app.get('/', (req, res) => res.send('Bot is alive!'));
-app.listen(process.env.PORT || 8080, () => console.log('🌐 Servidor web corriendo'));
+// Staff roles
+const STAFF_ROLES = {
+  owner: '1490466019720822884',
+  admin: '1490466026356342804',
+  mod: '1490466028545769473',
+  helper: '1490466913237602324'
+};
 
-// --------------------
-// READY EVENT
-// --------------------
-client.once('ready', async () => {
-    console.log(`🔥 Bot listo como ${client.user.tag}`);
-
-    // crear roles si no existen
-    const guild = await client.guilds.fetch(GUILD_ID);
-    for (const roleName of Object.values(ROLES)) {
-        if (!guild.roles.cache.find(r => r.name === roleName)) {
-            await guild.roles.create({ name: roleName, permissions: [] });
-            console.log(`✅ Rol creado: ${roleName}`);
-        }
-    }
-});
-
-// --------------------
-// WELCOME + AUTOROL
-// --------------------
+// --------------------------
+// BIENVENIDA + AUTO-ROL
+// --------------------------
 client.on('guildMemberAdd', async member => {
-    const guild = member.guild;
-    const role = guild.roles.cache.find(r => r.name === ROLES.member);
-    if (role) await member.roles.add(role);
+  try {
+    const rolMiembro = member.guild.roles.cache.get(MEMBER_ROLE_ID);
+    if (rolMiembro) await member.roles.add(rolMiembro);
 
-    const channel = guild.channels.cache.get(WELCOME_CHANNEL);
-    if (channel) {
-        channel.send(`🎉 Bienvenido ${member.user} al servidor! Te hemos dado el rol de ${ROLES.member}.`);
+    const canalBienvenida = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    if (canalBienvenida) {
+      const embedBienvenida = new EmbedBuilder()
+        .setTitle('🎉 ¡Bienvenido a NERV! ⚡')
+        .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Revisa estos links importantes:`)
+        .addFields(
+          { name: 'Reglas', value: '[Haz clic aquí](https://tulink1.com)', inline: true },
+          { name: 'Canales', value: '[Haz clic aquí](https://tulink2.com)', inline: true },
+          { name: 'Roles', value: '[Haz clic aquí](https://tulink3.com)', inline: true }
+        )
+        .setColor('#8A2BE2')
+        .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
+        .setImage('https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png')
+        .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' })
+        .setTimestamp();
+
+      await canalBienvenida.send({ embeds: [embedBienvenida] });
     }
+  } catch (error) {
+    console.error("❌ Error bienvenida:", error);
+  }
 });
 
-// --------------------
-// SLASH COMMANDS REGISTRATION
-// --------------------
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+// --------------------------
+// PANEL DE TRYOUTS
+// --------------------------
+client.once('ready', async () => {
+  console.log(`🔥 Bot listo como ${client.user.tag}`);
 
-const commands = [
-    new SlashCommandBuilder().setName('ping').setDescription('Revisa si el bot responde'),
-    new SlashCommandBuilder().setName('tiers').setDescription('Muestra los tiers'),
-    new SlashCommandBuilder()
-        .setName('warn')
-        .setDescription('Da un warn a un usuario')
-        .addUserOption(option => option.setName('usuario').setDescription('Usuario a advertir').setRequired(true))
-        .addStringOption(option => option.setName('razon').setDescription('Razón').setRequired(true)),
-    new SlashCommandBuilder()
-        .setName('mute')
-        .setDescription('Mutea a un usuario')
-        .addUserOption(option => option.setName('usuario').setDescription('Usuario a mutear').setRequired(true))
-        .addStringOption(option => option.setName('duracion').setDescription('Duración (ej: 10m, 1h)').setRequired(true))
-        .addStringOption(option => option.setName('razon').setDescription('Razón').setRequired(true)),
-    new SlashCommandBuilder()
-        .setName('ban')
-        .setDescription('Banea a un usuario')
-        .addUserOption(option => option.setName('usuario').setDescription('Usuario a banear').setRequired(true))
-        .addStringOption(option => option.setName('duracion').setDescription('Duración (ej: 1d, perma)').setRequired(true))
-        .addStringOption(option => option.setName('razon').setDescription('Razón').setRequired(true)),
-    new SlashCommandBuilder().setName('apply').setDescription('Aplicar a tryouts'),
-    new SlashCommandBuilder().setName('tryouts').setDescription('Comandos de tryouts')
-].map(command => command.toJSON());
+  try {
+    const canalApplys = await client.channels.fetch(APPLY_CHANNEL_ID);
+    const mensajes = await canalApplys.messages.fetch({ limit: 1 });
 
-const rest = new REST({ version: '10' }).setToken(TOKEN);
+    if (mensajes.size === 0) {
+      const botonRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('crear_ticket')
+          .setLabel('Abrir Tryout')
+          .setStyle(ButtonStyle.Danger)
+      );
 
-(async () => {
-    try {
-        console.log('🚀 Registrando slash commands...');
-        await rest.put(Routes.applicationGuildCommands(client.user?.id || '0', GUILD_ID), { body: commands });
-        console.log('✅ Slash commands registrados');
-    } catch (err) {
-        console.error(err);
+      await canalApplys.send({
+        content: "🎟️ Presiona el botón para aplicar al tryout.",
+        components: [botonRow]
+      });
     }
-})();
+  } catch (error) {
+    console.error("❌ Error panel tryouts:", error);
+  }
+});
 
-// --------------------
-// INTERACTION CREATE
-// --------------------
+// --------------------------
+// INTERACCIONES (BOTONES Y TICKETS)
+// --------------------------
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
+  if (interaction.isButton()) {
+    // CREAR TICKET
+    if (interaction.customId === 'crear_ticket') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const nombre = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
+        const categoria = interaction.guild.channels.cache.get(TRYOUT_CATEGORY_ID);
 
-    const { commandName } = interaction;
+        const rolesParaVer = [
+          STAFF_ROLES.owner,
+          STAFF_ROLES.admin,
+          STAFF_ROLES.mod
+        ].map(id => interaction.guild.roles.cache.get(id))
+          .filter(role => role)
+          .map(role => ({ id: role.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
 
-    // ----------------
-    // PING
-    // ----------------
-    if (commandName === 'ping') {
-        await interaction.reply('🏓 Pong!');
+        const permisoOverwrites = [
+          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
+          ...rolesParaVer,
+          { id: BOT_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageChannels] }
+        ];
+
+        const ticket = await interaction.guild.channels.create({
+          name: `tryout-${nombre}`,
+          type: ChannelType.GuildText,
+          parent: categoria.id,
+          permissionOverwrites: permisoOverwrites
+        });
+
+        const embedTicket = new EmbedBuilder()
+          .setTitle(`🎯 Tryout de ${interaction.user.username}`)
+          .setDescription("Responde estas preguntas:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?")
+          .setColor('#00FFFF')
+          .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
+          .setFooter({ text: '⚡ NERV - Compite, mejora y disfruta!' });
+
+        const cerrarRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('cerrar_ticket')
+            .setLabel('❌ Cerrar Ticket')
+            .setStyle(ButtonStyle.Danger)
+        );
+
+        await ticket.send({ embeds: [embedTicket], components: [cerrarRow] });
+        await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
+      } catch (error) {
+        console.error("❌ Error ticket:", error);
+        await interaction.editReply({ content: `❌ Error creando el ticket: ${error.message}` });
+      }
     }
 
-    // ----------------
-    // TIERS
-    // ----------------
-    else if (commandName === 'tiers') {
-        await interaction.reply('💎 Aquí están los tiers...');
+    // CERRAR TICKET
+    if (interaction.customId === 'cerrar_ticket') {
+      await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
+      setTimeout(() => {
+        interaction.channel.delete().catch(console.error);
+      }, 2000);
     }
+  }
 
-    // ----------------
-    // WARN
-    // ----------------
-    else if (commandName === 'warn') {
-        const target = interaction.options.getUser('usuario');
-        const reason = interaction.options.getString('razon');
-
-        if (!Object.values(STAFF_IDS).includes(interaction.user.id)) {
-            return interaction.reply({ content: '❌ No tienes permisos', ephemeral: true });
-        }
-
-        const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
-        if (logChannel) logChannel.send(`⚠️ ${interaction.user.tag} le dio un WARN a ${target.tag}. Razón: ${reason}`);
-
-        await interaction.reply({ content: `✅ ${target.tag} ha sido advertido.` });
-    }
-
-    // ----------------
-    // MUTE
-    // ----------------
-    else if (commandName === 'mute') {
-        const target = interaction.options.getUser('usuario');
-        const duration = interaction.options.getString('duracion');
-        const reason = interaction.options.getString('razon');
-
-        if (!Object.values(STAFF_IDS).includes(interaction.user.id)) {
-            return interaction.reply({ content: '❌ No tienes permisos', ephemeral: true });
-        }
-
-        const guild = interaction.guild;
-        const member = guild.members.cache.get(target.id);
-        const mutedRole = guild.roles.cache.find(r => r.name === ROLES.muted);
-
-        if (member && mutedRole) {
-            await member.roles.add(mutedRole);
-
-            const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
-            if (logChannel) logChannel.send(`🔇 ${interaction.user.tag} muteó a ${target.tag} por ${reason} (${duration})`);
-
-            await interaction.reply({ content: `✅ ${target.tag} ha sido muteado por ${duration}.` });
-        } else {
-            await interaction.reply({ content: '❌ No se pudo mutear al usuario.', ephemeral: true });
-        }
-    }
-
-    // ----------------
-    // BAN
-    // ----------------
-    else if (commandName === 'ban') {
-        const target = interaction.options.getUser('usuario');
-        const duration = interaction.options.getString('duracion');
-        const reason = interaction.options.getString('razon');
-
-        if (![STAFF_IDS.owner, STAFF_IDS.admin, STAFF_IDS.mod].includes(interaction.user.id)) {
-            return interaction.reply({ content: '❌ No tienes permisos', ephemeral: true });
-        }
-
-        const guild = interaction.guild;
-        const member = guild.members.cache.get(target.id);
-        if (member) {
-            await member.ban({ reason: reason });
-
-            const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
-            if (logChannel) logChannel.send(`⛔ ${interaction.user.tag} baneó a ${target.tag} por ${reason} (${duration})`);
-
-            await interaction.reply({ content: `✅ ${target.tag} ha sido baneado.` });
-        } else {
-            await interaction.reply({ content: '❌ No se pudo banear al usuario.', ephemeral: true });
-        }
-    }
-
-    // ----------------
-    // APPLY
-    // ----------------
-    else if (commandName === 'apply') {
-        await interaction.reply('📩 Gracias por aplicar! Nuestro staff revisará tu solicitud.');
-    }
-
-    // ----------------
-    // TRYOUTS
-    // ----------------
-    else if (commandName === 'tryouts') {
-        await interaction.reply('🎯 Comandos de tryouts activados.');
-    }
+  // --------------------------
+  // AQUÍ PODEMOS AGREGAR LOS COMANDOS SLASH (tiers, warn, mute, ping, etc.)
+  // --------------------------
 });
 
-// --------------------
+// --------------------------
 // LOGIN
-// --------------------
-client.login(TOKEN);
+// --------------------------
+client.login(process.env.DISCORD_TOKEN);
