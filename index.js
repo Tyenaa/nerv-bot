@@ -1,184 +1,199 @@
-const { 
-  Client, 
-  GatewayIntentBits, 
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
-  ChannelType, 
-  PermissionsBitField, 
-  EmbedBuilder 
-} = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const fs = require('fs');
 
-const express = require('express'); // Para UptimeRobot
-const app = express();
-const PORT = process.env.PORT || 3000;
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// --------------------------
-// SERVIDOR WEB PARA UPTIMEROOT
-// --------------------------
-app.get('/', (req, res) => res.send('✅ NERV Bot Online!'));
-app.listen(PORT, () => console.log(`🌐 Servidor web corriendo en puerto ${PORT}`));
+const TOKEN = process.env.DISCORD_TOKEN;
+const GUILD_ID = 'TU_GUILD_ID'; // reemplaza con tu guild id
+const LOG_CHANNEL_ID = '1490581213159620659'; // canal de logs
 
-// --------------------------
-// CLIENTE DE DISCORD
-// --------------------------
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
-  ]
-});
-
-console.log("🚀 Iniciando NERV Bot...");
-
-// --------------------------
-// AUTO-ROL MIEMBRO + BIENVENIDA
-// --------------------------
-client.on('guildMemberAdd', async member => {
-  try {
-    const rolMiembro = member.guild.roles.cache.get('1490466327045869628'); 
-    if (rolMiembro) await member.roles.add(rolMiembro);
-
-    const canalBienvenida = member.guild.channels.cache.get('1490483811664924883');
-    if (canalBienvenida) {
-      const embedBienvenida = new EmbedBuilder()
-        .setTitle('🎉 ¡Bienvenido a NERV! ⚡')
-        .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Aquí podrás mejorar, competir y formar parte de la comunidad NERV.`)
-        .setImage('https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png')
-        .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
-        .setColor('#8A2BE2')
-        .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' });
-
-      await canalBienvenida.send({ embeds: [embedBienvenida] });
-    }
-
-  } catch (error) {
-    console.error("❌ Error al asignar rol o enviar bienvenida:", error);
-  }
-});
-
-// --------------------------
-// PANEL DE TIERS
-// --------------------------
-client.once('ready', async () => {
-  console.log(`🔥 Bot listo como ${client.user.tag}`);
-
-  try {
-    const canalTiers = await client.channels.fetch('1490565371294650488'); // Canal Tiers
-    const mensajesTiers = await canalTiers.messages.fetch({ limit: 5 });
-
-    const embedTiers = new EmbedBuilder()
-      .setTitle('🎮 Tiers - NERV Esports')
-      .setDescription('Aquí puedes ver los niveles competitivos de NERV y los rangos que entran en cada tier. Presiona el botón de tu tier para postularte y abrir un ticket.')
-      .addFields(
-        { name: 'Tier 1 🏆 - Profesionales', value: 'Rango: Jugador RLCS', inline: false },
-        { name: 'Tier 2 ⚡ - Competitivos', value: 'Rango: SSL → Grand Champion 3', inline: false },
-        { name: 'Tier 3 🎯 - Veteranos', value: 'Rango: Grand Champion 2 → Champion 3', inline: false },
-        { name: 'Tier 4 📈 - Aspirantes', value: 'Rango: Champion 2 → Diamond 3', inline: false },
-        { name: 'Tier 5 🔰 - En progreso', value: 'Rango: Diamond 2 → Bronze 1', inline: false }
-      )
-      .setColor('#E10600')
-      .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
-      .setFooter({ text: '⚡ NERV Esports - Compite, mejora y disfruta!' });
-
-    const botonesTiers = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('postular_t1').setLabel('🏆 Profesionales').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t2').setLabel('⚡ Competitivos').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t3').setLabel('🎯 Veteranos').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t4').setLabel('📈 Aspirantes').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t5').setLabel('🔰 En progreso').setStyle(ButtonStyle.Danger)
-    );
-
-    if (mensajesTiers.size === 0) {
-      await canalTiers.send({ embeds: [embedTiers], components: [botonesTiers] });
-      console.log('✅ Embed de Tiers enviado.');
-    }
-
-  } catch (error) {
-    console.error('❌ Error enviando embed de Tiers:', error);
-  }
-});
-
-// --------------------------
-// SISTEMA DE TICKETS POR TIER
-// --------------------------
-const tierRoles = {
-  postular_t1: { id: '1490563096610078862', name: 'Profesionales', emoji: '🏆', requisitos: 'Jugador RLCS' },
-  postular_t2: { id: '1490563098937921748', name: 'Competitivos', emoji: '⚡', requisitos: 'SSL → Grand Champion 3' },
-  postular_t3: { id: '1490563101479931964', name: 'Veteranos', emoji: '🎯', requisitos: 'Grand Champion 2 → Champion 3' },
-  postular_t4: { id: '1490563105736884325', name: 'Aspirantes', emoji: '📈', requisitos: 'Champion 2 → Diamond 3' },
-  postular_t5: { id: '1490563136783126710', name: 'En progreso', emoji: '🔰', requisitos: 'Diamond 2 → Bronze 1' }
+// IDs de roles de staff
+const STAFF_ROLES = {
+    helper: '1490466913237602324',
+    mod: '1490466028545769473',
+    admin: '1490466026356342804',
+    owner: '1490466019720822884'
 };
 
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isButton()) return;
+// Moderation JSON
+let moderationData = {};
+if (fs.existsSync('moderation.json')) {
+    moderationData = JSON.parse(fs.readFileSync('moderation.json'));
+}
 
-  if (Object.keys(tierRoles).includes(interaction.customId)) {
-    await interaction.deferReply({ ephemeral: true });
+function saveModerationData() {
+    fs.writeFileSync('moderation.json', JSON.stringify(moderationData, null, 2));
+}
 
-    try {
-      const tier = tierRoles[interaction.customId];
-      const nombreUsuario = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
-      const categoria = interaction.guild.channels.cache.get('1490462544798810173'); // Categoría Tryouts
+// Crear rol Muted si no existe
+client.on('ready', async () => {
+    console.log(`🔥 Bot listo como ${client.user.tag}`);
+    const guild = client.guilds.cache.get(GUILD_ID);
+    if (!guild) return console.error("Guild no encontrada.");
 
-      const rolesParaVer = [
-        '1490466019720822884', // Owner
-        '1490466026356342804', // Admin
-        '1490466028545769473'  // Mod
-      ].map(id => interaction.guild.roles.cache.get(id))
-        .filter(role => role)
-        .map(role => ({ id: role.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
-
-      const permisoOverwrites = [
-        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
-        ...rolesParaVer,
-        { id: '1490472100304257175', allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageChannels] }
-      ];
-
-      const ticket = await interaction.guild.channels.create({
-        name: `tier-${nombreUsuario}`,
-        type: ChannelType.GuildText,
-        parent: categoria.id,
-        permissionOverwrites: permisoOverwrites
-      });
-
-      // Asignar rol del Tier
-      const rolTier = interaction.guild.roles.cache.get(tier.id);
-      if (rolTier) await interaction.member.roles.add(rolTier);
-
-      const embedTicket = new EmbedBuilder()
-        .setTitle(`🎮 Postulación para Tiers`)
-        .setDescription(`¡Estás por postularte al **${tier.name} ${tier.emoji}**!\n\n**Requisitos:** ${tier.requisitos}\n**Rango actual:** Indica tu rango actual\n**Prueba:** Envía evidencia de tu nivel actual para esta temporada\n**ID del juego:** Tu ID para verificación`)
-        .setColor('#00FFFF')
-        .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
-        .setFooter({ text: '⚡ NERV - Compite, mejora y disfruta!' });
-
-      const cerrarRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('cerrar_ticket')
-          .setLabel('❌ Cerrar Ticket')
-          .setStyle(ButtonStyle.Danger)
-      );
-
-      await ticket.send({ embeds: [embedTicket], components: [cerrarRow] });
-      await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
-
-    } catch (error) {
-      console.error("❌ Error creando ticket por Tier:", error);
-      await interaction.editReply({ content: `❌ Error creando ticket: ${error.message}` });
+    if (!guild.roles.cache.find(r => r.name === 'Muted')) {
+        await guild.roles.create({ name: 'Muted', color: '#808080', permissions: [] });
+        console.log('✅ Rol Muted creado');
     }
-  }
 
-  if (interaction.customId === 'cerrar_ticket') {
-    await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
-    setTimeout(() => {
-      interaction.channel.delete().catch(console.error);
-    }, 2000);
-  }
+    // Registrar comandos slash
+    const commands = [
+        new SlashCommandBuilder().setName('warn').setDescription('Advierte a un usuario')
+            .addUserOption(o => o.setName('usuario').setDescription('Usuario a advertir').setRequired(true))
+            .addStringOption(o => o.setName('razon').setDescription('Razón')),
+        new SlashCommandBuilder().setName('mute').setDescription('Mutea a un usuario temporal o permanentemente')
+            .addUserOption(o => o.setName('usuario').setDescription('Usuario a mutear').setRequired(true))
+            .addStringOption(o => o.setName('duracion').setDescription('Duración: 10m, 1h, perma').setRequired(true))
+            .addStringOption(o => o.setName('razon').setDescription('Razón')),
+        new SlashCommandBuilder().setName('ban').setDescription('Banea a un usuario')
+            .addUserOption(o => o.setName('usuario').setDescription('Usuario a banear').setRequired(true))
+            .addStringOption(o => o.setName('duracion').setDescription('Duración: 1d, 7d, perma').setRequired(true))
+            .addStringOption(o => o.setName('razon').setDescription('Razón')),
+        new SlashCommandBuilder().setName('kick').setDescription('Expulsa a un usuario')
+            .addUserOption(o => o.setName('usuario').setDescription('Usuario a expulsar').setRequired(true))
+            .addStringOption(o => o.setName('razon').setDescription('Razón'))
+    ].map(cmd => cmd.toJSON());
+
+    const rest = new REST({ version: '10' }).setToken(TOKEN);
+    await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
+    console.log('✅ Comandos slash registrados');
 });
 
-// --------------------------
-// LOGIN BOT
-// --------------------------
-client.login(process.env.DISCORD_TOKEN);
+// Verificar permisos según rol
+function canDo(member, action) {
+    if (member.roles.cache.has(STAFF_ROLES.owner) || member.roles.cache.has(STAFF_ROLES.admin)) return true;
+    if (member.roles.cache.has(STAFF_ROLES.mod)) {
+        if (action === 'warn' || action === 'kick') return false;
+        return !['ban_perma'].includes(action);
+    }
+    if (member.roles.cache.has(STAFF_ROLES.helper)) {
+        return ['warn', 'mute_temporal'].includes(action);
+    }
+    return false;
+}
+
+// Interacciones
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const { commandName, options, guild, member } = interaction;
+    const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
+    if (!logChannel) return;
+
+    const targetUser = options.getUser('usuario');
+    const reason = options.getString('razon') || 'No especificada';
+
+    if (!moderationData[targetUser.id]) moderationData[targetUser.id] = { warns: 0, mutes: 0, bans: 0 };
+    
+    const targetMember = guild.members.cache.get(targetUser.id);
+    const mutedRole = guild.roles.cache.find(r => r.name === 'Muted');
+
+    // ----- WARN -----
+    if (commandName === 'warn') {
+        if (!canDo(member, 'warn')) return interaction.reply({ content: '❌ No tienes permisos para dar warn', ephemeral: true });
+
+        moderationData[targetUser.id].warns += 1;
+        saveModerationData();
+
+        const embed = new EmbedBuilder()
+            .setTitle('⚠️ Usuario Advertido')
+            .addFields(
+                { name: 'Usuario', value: `${targetUser.tag}` },
+                { name: 'Moderador', value: `${interaction.user.tag}` },
+                { name: 'Razón', value: reason },
+                { name: 'Warns Totales', value: `${moderationData[targetUser.id].warns}` }
+            )
+            .setColor('#FFA500')
+            .setTimestamp();
+
+        logChannel.send({ embeds: [embed] });
+        return interaction.reply({ content: `✅ ${targetUser.tag} advertido`, ephemeral: true });
+    }
+
+    // ----- MUTE -----
+    if (commandName === 'mute') {
+        let durationStr = options.getString('duracion');
+        let actionType = durationStr === 'perma' ? 'mute_perma' : 'mute_temporal';
+        if (!canDo(member, actionType)) return interaction.reply({ content: '❌ No tienes permisos para mutear así', ephemeral: true });
+
+        let duration = 0;
+        if (durationStr !== 'perma') {
+            if (durationStr.endsWith('m')) duration = parseInt(durationStr) * 60 * 1000;
+            else if (durationStr.endsWith('h')) duration = parseInt(durationStr) * 60 * 60 * 1000;
+            else return interaction.reply({ content: 'Formato inválido. Usa 10m, 1h o perma', ephemeral: true });
+        }
+
+        await targetMember.roles.add(mutedRole, reason);
+        moderationData[targetUser.id].mutes += 1;
+        saveModerationData();
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔇 Usuario Muted')
+            .addFields(
+                { name: 'Usuario', value: `${targetUser.tag}` },
+                { name: 'Moderador', value: `${interaction.user.tag}` },
+                { name: 'Razón', value: reason },
+                { name: 'Duración', value: durationStr }
+            )
+            .setColor('#808080')
+            .setTimestamp();
+
+        logChannel.send({ embeds: [embed] });
+        interaction.reply({ content: `✅ ${targetUser.tag} ha sido muted ${durationStr}`, ephemeral: true });
+
+        if (duration > 0) {
+            setTimeout(async () => {
+                if (targetMember.roles.cache.has(mutedRole.id)) {
+                    await targetMember.roles.remove(mutedRole, 'Mute expirado');
+                    logChannel.send({ content: `⏰ ${targetUser.tag} desmuteado automáticamente` });
+                }
+            }, duration);
+        }
+    }
+
+    // ----- BAN -----
+    if (commandName === 'ban') {
+        let durationStr = options.getString('duracion');
+        let actionType = durationStr === 'perma' ? 'ban_perma' : 'ban_temporal';
+        if (!canDo(member, actionType)) return interaction.reply({ content: '❌ No tienes permisos para banear así', ephemeral: true });
+
+        await targetMember.ban({ reason });
+        moderationData[targetUser.id].bans += 1;
+        saveModerationData();
+
+        const embed = new EmbedBuilder()
+            .setTitle('⛔ Usuario Baneado')
+            .addFields(
+                { name: 'Usuario', value: `${targetUser.tag}` },
+                { name: 'Moderador', value: `${interaction.user.tag}` },
+                { name: 'Razón', value: reason },
+                { name: 'Duración', value: durationStr }
+            )
+            .setColor('#FF0000')
+            .setTimestamp();
+
+        logChannel.send({ embeds: [embed] });
+        return interaction.reply({ content: `✅ ${targetUser.tag} baneado ${durationStr}`, ephemeral: true });
+    }
+
+    // ----- KICK -----
+    if (commandName === 'kick') {
+        if (!canDo(member, 'kick')) return interaction.reply({ content: '❌ No tienes permisos para kick', ephemeral: true });
+
+        await targetMember.kick(reason);
+        const embed = new EmbedBuilder()
+            .setTitle('👢 Usuario Expulsado')
+            .addFields(
+                { name: 'Usuario', value: `${targetUser.tag}` },
+                { name: 'Moderador', value: `${interaction.user.tag}` },
+                { name: 'Razón', value: reason }
+            )
+            .setColor('#FFAA00')
+            .setTimestamp();
+
+        logChannel.send({ embeds: [embed] });
+        return interaction.reply({ content: `✅ ${targetUser.tag} expulsado`, ephemeral: true });
+    }
+});
+
+client.login(TOKEN);
