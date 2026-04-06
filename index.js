@@ -1,17 +1,12 @@
 const { 
   Client, 
   GatewayIntentBits, 
-  Partials,
   ActionRowBuilder, 
   ButtonBuilder, 
   ButtonStyle, 
   ChannelType, 
   PermissionsBitField, 
-  EmbedBuilder,
-  Events,
-  REST,
-  Routes,
-  SlashCommandBuilder
+  EmbedBuilder 
 } = require('discord.js');
 
 require('dotenv').config();
@@ -19,38 +14,23 @@ require('dotenv').config();
 const TOKEN = process.env.DISCORD_TOKEN;
 
 // -----------------
-// CONFIGURACIÓN DE IDs
+// IDS
 // -----------------
 const IDs = {
   roles: {
-    member: '1490466327045869628',
-    muted: 'MUTED_ROLE_ID_HERE',
-    staffRoles: {
-      owner: '1490466019720822884',
-      admin: '1490466026356342804',
-      mod: '1490466028545769473',
-      helper: '1490466913237602324'
-    }
+    muted: '1490587338697609257',
+    staffRoles: ['1490466019720822884','1490466026356342804','1490466028545769473'] // owner, admin, mod
   },
   channels: {
-    welcome: '1490483811664924883',
-    staffLog: 'STAFF_LOG_CHANNEL_ID',
-    apply: '1490462939361312941',
+    staffLog: '1490581213159620659',
     tryoutsCategory: '1490462544798810173',
-    tiers: '1490565371294650488',
-    reglas: '1490450067860230235'
-  },
-  tiersRoles: {
-    t1: '1490563096610078862',
-    t2: '1490563098937921748',
-    t3: '1490563101479931964',
-    t4: '1490563105736884325',
-    t5: '1490563136783126710'
+    apply: '1490462939361312941',
+    tiers: '1490565371294650488'
   }
 };
 
 // -----------------
-// CLIENTE
+// CLIENT
 // -----------------
 const client = new Client({
   intents: [
@@ -64,43 +44,6 @@ const client = new Client({
 console.log("🚀 Iniciando NERV Bot...");
 
 // -----------------
-// BIENVENIDA Y AUTOROL
-// -----------------
-client.on('guildMemberAdd', async member => {
-  try {
-    // Autorol
-    const rolMiembro = member.guild.roles.cache.get(IDs.roles.member);
-    if (rolMiembro) await member.roles.add(rolMiembro);
-
-    // Embed bienvenida
-    const canalBienvenida = member.guild.channels.cache.get(IDs.channels.welcome);
-    if (canalBienvenida) {
-      const embed = new EmbedBuilder()
-        .setTitle('🎉 ¡Bienvenido a NERV! ⚡')
-        .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Recuerda leer las reglas y tomar tu rol.`)
-        .setImage('https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png')
-        .setColor('#8A2BE2')
-        .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' });
-
-      await canalBienvenida.send({ embeds: [embed] });
-    }
-  } catch (error) {
-    console.error("❌ Error bienvenida:", error);
-  }
-});
-
-// -----------------
-// PING
-// -----------------
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  if (interaction.commandName === 'ping') {
-    await interaction.reply({ content: `🏓 Pong! Latencia: ${client.ws.ping}ms` });
-  }
-});
-
-// -----------------
 // MODERACIÓN
 // -----------------
 client.on('interactionCreate', async interaction => {
@@ -108,21 +51,20 @@ client.on('interactionCreate', async interaction => {
 
   const member = interaction.options.getMember('usuario');
   const razon = interaction.options.getString('razon') || 'No especificada';
-  const staffRoles = Object.values(IDs.roles.staffRoles);
+  const logChannel = interaction.guild.channels.cache.get(IDs.channels.staffLog);
 
-  if (!interaction.member.roles.cache.some(r => staffRoles.includes(r.id))) {
+  // Verificar permisos del staff
+  if (!interaction.member.roles.cache.some(r => IDs.roles.staffRoles.includes(r.id))) {
     return interaction.reply({ content: '❌ No tienes permisos para usar este comando.', ephemeral: true });
   }
 
-  const logChannel = interaction.guild.channels.cache.get(IDs.channels.staffLog);
-
-  // WARN
+  // ----- WARN -----
   if (interaction.commandName === 'warn') {
     await interaction.reply({ content: `⚠️ ${member.user.tag} ha sido advertido.\nRazón: ${razon}` });
     if (logChannel) logChannel.send(`⚠️ **Warn:** ${member.user.tag} | Razón: ${razon} | Staff: ${interaction.user.tag}`);
   }
 
-  // MUTE
+  // ----- MUTE -----
   if (interaction.commandName === 'mute') {
     const duracion = interaction.options.getString('duracion') || '10m';
     const muteRole = interaction.guild.roles.cache.get(IDs.roles.muted);
@@ -140,7 +82,7 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // UNMUTE
+  // ----- UNMUTE -----
   if (interaction.commandName === 'unmute') {
     const muteRole = interaction.guild.roles.cache.get(IDs.roles.muted);
     if (!muteRole) return interaction.reply({ content: '❌ No existe el rol Muted.', ephemeral: true });
@@ -150,14 +92,14 @@ client.on('interactionCreate', async interaction => {
     if (logChannel) logChannel.send(`🔊 **Unmute:** ${member.user.tag} | Staff: ${interaction.user.tag}`);
   }
 
-  // BAN
+  // ----- BAN -----
   if (interaction.commandName === 'ban') {
     await member.ban({ reason: razon });
     await interaction.reply({ content: `⛔ ${member.user.tag} ha sido baneado.\nRazón: ${razon}` });
     if (logChannel) logChannel.send(`⛔ **Ban:** ${member.user.tag} | Razón: ${razon} | Staff: ${interaction.user.tag}`);
   }
 
-  // UNBAN
+  // ----- UNBAN -----
   if (interaction.commandName === 'unban') {
     const userId = interaction.options.getString('usuario_id');
     await interaction.guild.bans.remove(userId);
@@ -172,25 +114,20 @@ client.on('interactionCreate', async interaction => {
 client.once('ready', async () => {
   console.log(`🔥 Bot listo como ${client.user.tag}`);
 
-  const panelConfig = [
+  const panels = [
     { canalId: IDs.channels.apply, customId: 'crear_ticket_tryout', label: 'Abrir Tryout', style: ButtonStyle.Danger },
     { canalId: IDs.channels.tiers, customId: 'crear_ticket_tier', label: 'Abrir Tier', style: ButtonStyle.Primary }
   ];
 
-  for (const p of panelConfig) {
+  for (const panel of panels) {
     try {
-      const canal = await client.channels.fetch(p.canalId);
+      const canal = await client.channels.fetch(panel.canalId);
       const mensajes = await canal.messages.fetch({ limit: 1 });
-
       if (mensajes.size === 0) {
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(p.customId).setLabel(p.label).setStyle(p.style)
+          new ButtonBuilder().setCustomId(panel.customId).setLabel(panel.label).setStyle(panel.style)
         );
-
-        await canal.send({
-          content: `🎟️ Presiona el botón para ${p.label.toLowerCase()}.`,
-          components: [row]
-        });
+        await canal.send({ content: `🎟️ Presiona el botón para ${panel.label.toLowerCase()}.`, components: [row] });
       }
     } catch (error) {
       console.error("❌ Error creando panel:", error);
@@ -201,16 +138,11 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isButton()) return;
 
-  // Configuración de roles visibles y permisos
-  const rolesStaff = [
-    IDs.roles.staffRoles.owner,
-    IDs.roles.staffRoles.admin,
-    IDs.roles.staffRoles.mod
-  ].map(id => interaction.guild.roles.cache.get(id))
+  const rolesStaff = IDs.roles.staffRoles.map(id => interaction.guild.roles.cache.get(id))
     .filter(r => r)
     .map(r => ({ id: r.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
 
-  // ----------------- TICKETS TRYOUTS -----------------
+  // ----- TRYOUTS -----
   if (interaction.customId === 'crear_ticket_tryout') {
     await interaction.deferReply({ ephemeral: true });
     const categoria = interaction.guild.channels.cache.get(IDs.channels.tryoutsCategory);
@@ -228,7 +160,7 @@ client.on('interactionCreate', async interaction => {
 
     const embed = new EmbedBuilder()
       .setTitle(`🎯 Tryout de ${interaction.user.username}`)
-      .setDescription("Responde las siguientes preguntas dentro de este ticket:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?")
+      .setDescription("Responde las preguntas:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?")
       .setColor('#00FFFF');
 
     const cerrarRow = new ActionRowBuilder().addComponents(
@@ -239,7 +171,7 @@ client.on('interactionCreate', async interaction => {
     await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
   }
 
-  // ----------------- TICKETS TIERS -----------------
+  // ----- TIERS -----
   if (interaction.customId === 'crear_ticket_tier') {
     await interaction.deferReply({ ephemeral: true });
     const categoria = interaction.guild.channels.cache.get(IDs.channels.tryoutsCategory);
@@ -275,7 +207,7 @@ client.on('interactionCreate', async interaction => {
     await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
   }
 
-  // ----------------- CERRAR TICKET -----------------
+  // ----- CERRAR TICKET -----
   if (interaction.customId === 'cerrar_ticket') {
     await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
     setTimeout(() => interaction.channel.delete().catch(console.error), 2000);
