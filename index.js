@@ -23,19 +23,16 @@ console.log("🚀 Iniciando NERV Bot...");
 // --------------------------
 client.on('guildMemberAdd', async member => {
   try {
-    // Dar rol Miembro
     const rolMiembro = member.guild.roles.cache.get('1490466327045869628'); 
     if (rolMiembro) await member.roles.add(rolMiembro);
-    console.log(`✅ Se dio rol Miembro a ${member.user.tag}`);
 
-    // Embed de bienvenida
     const canalBienvenida = member.guild.channels.cache.get('1490483811664924883');
     if (canalBienvenida) {
       const embedBienvenida = new EmbedBuilder()
         .setTitle('🎉 ¡Bienvenido a NERV! ⚡')
         .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Aquí podrás mejorar, competir y formar parte de la comunidad NERV.`)
-        .setImage('https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png?ex=69d43947&is=69d2e7c7&hm=c0d46c37ad38bb19cc99d9972c8b47deb788bd8dbb29fbb77658571bb6fa0da2&=&format=webp&quality=lossless')
-        .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png?ex=69d43182&is=69d2e002&hm=2c28f71feee732baa6e0da74790e5da8c0379bb69c7ef95dc92e604121285d39&=&format=webp&quality=lossless')
+        .setImage('https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png')
+        .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
         .setColor('#8A2BE2')
         .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' });
 
@@ -53,92 +50,64 @@ client.on('guildMemberAdd', async member => {
 client.once('ready', async () => {
   console.log(`🔥 Bot listo como ${client.user.tag}`);
 
-  // --- CANAL DE APPLYs ---
-  try {
-    const canalApplys = await client.channels.fetch('1490462939361312941'); // Canal Applys
-    const mensajes = await canalApplys.messages.fetch({ limit: 1 });
-
-    if (mensajes.size === 0) {
-      const botonRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('crear_ticket')
-          .setLabel('Abrir Tryout')
-          .setStyle(ButtonStyle.Danger)
-      );
-
-      await canalApplys.send({
-        content: "🎟️ Presiona el botón para aplicar al tryout.",
-        components: [botonRow]
-      });
-    }
-  } catch (error) {
-    console.error("❌ Error panel Applys:", error);
-  }
-
   // --- CANAL DE TIERS ---
   try {
     const canalTiers = await client.channels.fetch('1490565371294650488'); // Canal Tiers
+    const mensajesTiers = await canalTiers.messages.fetch({ limit: 5 });
 
     const embedTiers = new EmbedBuilder()
       .setTitle('🎮 Tiers - Nerv Esports')
       .setDescription('Aquí puedes ver los niveles competitivos de NERV y los rangos que entran en cada tier. Presiona el botón de tu tier para postularte y abrir un ticket.')
       .addFields(
-        { name: 'Tier 1 - Profesionales', value: 'Rango: Jugador RLCS', inline: false },
-        { name: 'Tier 2 - Competitivos', value: 'Rango: SSL → Grand Champion 3', inline: false },
-        { name: 'Tier 3 - Veteranos', value: 'Rango: Grand Champion 2 → Champion 3', inline: false },
-        { name: 'Tier 4 - Aspirantes', value: 'Rango: Champion 2 → Diamond 3', inline: false },
-        { name: 'Tier 5 - En progreso', value: 'Rango: Diamond 2 → abajo', inline: false }
+        { name: 'Tier 1 🏆 - Profesionales', value: 'Rango: Jugador RLCS', inline: false },
+        { name: 'Tier 2 ⚡ - Competitivos', value: 'Rango: SSL → Grand Champion 3', inline: false },
+        { name: 'Tier 3 🎯 - Veteranos', value: 'Rango: Grand Champion 2 → Champion 3', inline: false },
+        { name: 'Tier 4 📈 - Aspirantes', value: 'Rango: Champion 2 → Diamond 3', inline: false },
+        { name: 'Tier 5 🔰 - En progreso', value: 'Rango: Diamond 2 → Bronze 1', inline: false }
       )
       .setColor('#E10600')
       .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
       .setFooter({ text: '⚡ Nerv Esports - Compite, mejora y disfruta!' });
 
     const botonesTiers = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('postular_t1').setLabel('🟥 Profesionales').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t2').setLabel('🔥 Competitivos').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t3').setLabel('🛡️ Veteranos').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t4').setLabel('⬜ Aspirantes').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('postular_t5').setLabel('⚫ En progreso').setStyle(ButtonStyle.Danger)
+      new ButtonBuilder().setCustomId('postular_t1').setLabel('🏆 Profesionales').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t2').setLabel('⚡ Competitivos').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t3').setLabel('🎯 Veteranos').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t4').setLabel('📈 Aspirantes').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t5').setLabel('🔰 En progreso').setStyle(ButtonStyle.Danger)
     );
 
-    const mensajesTiers = await canalTiers.messages.fetch({ limit: 5 });
     if (mensajesTiers.size === 0) {
       await canalTiers.send({ embeds: [embedTiers], components: [botonesTiers] });
       console.log('✅ Embed de Tiers enviado.');
     }
+
   } catch (error) {
     console.error('❌ Error enviando embed de Tiers:', error);
   }
 });
 
 // --------------------------
-// SISTEMA DE TICKETS CON EMBED POR TIER
+// SISTEMA DE TICKETS POR TIER
 // --------------------------
 const tierRoles = {
-  postular_t1: '1490563096610078862', // Profesionales
-  postular_t2: '1490563098937921748', // Competitivos
-  postular_t3: '1490563101479931964', // Veteranos
-  postular_t4: '1490563105736884325', // Aspirantes
-  postular_t5: '1490563136783126710'  // En progreso
+  postular_t1: { id: '1490563096610078862', name: 'Profesionales', emoji: '🏆', requisitos: 'Jugador RLCS' },
+  postular_t2: { id: '1490563098937921748', name: 'Competitivos', emoji: '⚡', requisitos: 'SSL → Grand Champion 3' },
+  postular_t3: { id: '1490563101479931964', name: 'Veteranos', emoji: '🎯', requisitos: 'Grand Champion 2 → Champion 3' },
+  postular_t4: { id: '1490563105736884325', name: 'Aspirantes', emoji: '📈', requisitos: 'Champion 2 → Diamond 3' },
+  postular_t5: { id: '1490563136783126710', name: 'En progreso', emoji: '🔰', requisitos: 'Diamond 2 → Bronze 1' }
 };
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isButton()) return;
 
-  // CREAR TICKET POR TIER
-  if (Object.keys(tierRoles).includes(interaction.customId) || interaction.customId === 'crear_ticket') {
+  if (Object.keys(tierRoles).includes(interaction.customId)) {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      const tierRolId = tierRoles[interaction.customId]; // undefined si es boton general "crear_ticket"
-      const nombre = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
+      const tier = tierRoles[interaction.customId];
+      const nombreUsuario = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
       const categoria = interaction.guild.channels.cache.get('1490462544798810173'); // Categoría Tryouts
-      if (!categoria) throw new Error("Categoría de tickets no encontrada.");
-
-      const botPerm = categoria.permissionsFor(interaction.guild.members.me);
-      if (!botPerm.has(PermissionsBitField.Flags.ManageChannels)) {
-        throw new Error("El bot no tiene permiso para crear canales en la categoría.");
-      }
 
       const rolesParaVer = [
         '1490466019720822884', // Owner
@@ -156,23 +125,19 @@ client.on('interactionCreate', async interaction => {
       ];
 
       const ticket = await interaction.guild.channels.create({
-        name: `tryout-${nombre}`,
+        name: `tier-${nombreUsuario}`,
         type: ChannelType.GuildText,
         parent: categoria.id,
         permissionOverwrites: permisoOverwrites
       });
 
-      // Asignar rol del Tier si corresponde
-      if (tierRolId) {
-        const rolTier = interaction.guild.roles.cache.get(tierRolId);
-        if (rolTier) await interaction.member.roles.add(rolTier);
-      }
+      // Asignar rol del Tier
+      const rolTier = interaction.guild.roles.cache.get(tier.id);
+      if (rolTier) await interaction.member.roles.add(rolTier);
 
       const embedTicket = new EmbedBuilder()
-        .setTitle(`🎯 Tryout de ${interaction.user.username}`)
-        .setDescription(tierRolId
-          ? `Has abierto un ticket para postularte a **${interaction.guild.roles.cache.get(tierRolId).name}**.\nResponde aquí tus datos:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?`
-          : "Responde las siguientes preguntas dentro de este ticket:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?")
+        .setTitle(`🎮 Postulación para Tiers`)
+        .setDescription(`¡Estás por postularte al **${tier.name} ${tier.emoji}**!\n\n**Requisitos:** ${tier.requisitos}\n**Rango actual:** Indica tu rango actual\n**Prueba:** Envía evidencia de tu nivel actual para esta temporada\n**ID del juego:** Tu ID para verificación`)
         .setColor('#00FFFF')
         .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
         .setFooter({ text: '⚡ NERV - Compite, mejora y disfruta!' });
@@ -188,12 +153,11 @@ client.on('interactionCreate', async interaction => {
       await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
 
     } catch (error) {
-      console.error("❌ Error creando ticket:", error);
+      console.error("❌ Error creando ticket por Tier:", error);
       await interaction.editReply({ content: `❌ Error creando ticket: ${error.message}` });
     }
   }
 
-  // CERRAR TICKET
   if (interaction.customId === 'cerrar_ticket') {
     await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
     setTimeout(() => {
