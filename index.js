@@ -9,7 +9,8 @@ const {
   PermissionsBitField, 
   EmbedBuilder, 
   REST, 
-  Routes
+  Routes, 
+  SlashCommandBuilder
 } = require('discord.js');
 require('dotenv').config();
 
@@ -32,7 +33,12 @@ const IDs = {
     mod: '1490466028545769473',
     helper: '1490466913237602324'
   },
-  rolBot: '1490472100304257175'
+  rolBot: '1490472100304257175',
+  rolesTiers: {
+    tier1: 'ID_TIER1',
+    tier2: 'ID_TIER2',
+    tier3: 'ID_TIER3'
+  }
 };
 
 // --------------------------
@@ -54,16 +60,17 @@ client.on('guildMemberAdd', async member => {
     const rolMiembro = member.guild.roles.cache.get(IDs.rolMiembro); 
     if (rolMiembro) await member.roles.add(rolMiembro);
 
-    // Embed de bienvenida
+    // Embed de bienvenida con banner
     const canalBienvenida = member.guild.channels.cache.get(IDs.canalBienvenida);
     if (canalBienvenida) {
       const embedBienvenida = new EmbedBuilder()
         .setTitle('🎉 ¡Bienvenido a NERV! ⚡')
-        .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Lee las reglas y consulta los tiers en los siguientes canales:`)
+        .setDescription(`¡Nos alegra tenerte en el servidor, ${member.user.username}! Lee las reglas y consulta los tiers:`)
         .addFields(
           { name: '📜 Reglas', value: `<#${IDs.canalReglas}>`, inline: true },
           { name: '🌟 Tiers', value: `<#${IDs.canalTiers}>`, inline: true }
         )
+        .setImage('URL_DEL_BANNER_AQUI') // <- Aquí tu banner
         .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
         .setColor('#8A2BE2')
         .setFooter({ text: '⚡ ¡Compite, mejora y disfruta! - NERV' });
@@ -83,24 +90,17 @@ client.once('ready', async () => {
   console.log(`🔥 Bot listo como ${client.user.tag}`);
 
   try {
-    const canalApplys = await client.channels.fetch('1490462939361312941'); // Canal Applys
+    // Panel Tryouts
+    const canalApplys = await client.channels.fetch('1490462939361312941');
     const mensajes = await canalApplys.messages.fetch({ limit: 1 });
-
     if (mensajes.size === 0) {
       const botonRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('crear_ticket')
-          .setLabel('Abrir Tryout')
-          .setStyle(ButtonStyle.Danger)
+        new ButtonBuilder().setCustomId('crear_ticket').setLabel('Abrir Tryout').setStyle(ButtonStyle.Danger)
       );
-
-      await canalApplys.send({
-        content: "🎟️ Presiona el botón para aplicar al tryout.",
-        components: [botonRow]
-      });
+      await canalApplys.send({ content: "🎟️ Presiona el botón para aplicar al tryout.", components: [botonRow] });
     }
 
-    // Panel de tiers (solo botones)
+    // Panel Tiers
     const canalTiers = await client.channels.fetch(IDs.canalTiers);
     const mensajesTiers = await canalTiers.messages.fetch({ limit: 1 });
     if (mensajesTiers.size === 0) {
@@ -110,7 +110,6 @@ client.once('ready', async () => {
           new ButtonBuilder().setCustomId('tier2').setLabel('Tier 2').setStyle(ButtonStyle.Primary),
           new ButtonBuilder().setCustomId('tier3').setLabel('Tier 3').setStyle(ButtonStyle.Primary)
         );
-
       await canalTiers.send({ content: '🌟 Escoge tu tier:', components: [tiersRow] });
     }
 
@@ -120,11 +119,10 @@ client.once('ready', async () => {
 });
 
 // --------------------------
-// SISTEMA DE TICKETS
+// INTERACCIONES BOTONES / SLASH
 // --------------------------
 client.on('interactionCreate', async interaction => {
   if (interaction.isButton()) {
-
     // ----- CREAR TICKET -----
     if (interaction.customId === 'crear_ticket') {
       await interaction.deferReply({ ephemeral: true });
@@ -137,11 +135,8 @@ client.on('interactionCreate', async interaction => {
         const botPerm = categoria.permissionsFor(interaction.guild.members.me);
         if (!botPerm.has(PermissionsBitField.Flags.ManageChannels)) throw new Error("Bot sin permisos.");
 
-        const rolesParaVer = [
-          IDs.rolesStaff.owner,
-          IDs.rolesStaff.admin,
-          IDs.rolesStaff.mod
-        ].map(id => interaction.guild.roles.cache.get(id))
+        const rolesParaVer = [IDs.rolesStaff.owner, IDs.rolesStaff.admin, IDs.rolesStaff.mod]
+          .map(id => interaction.guild.roles.cache.get(id))
           .filter(r => r)
           .map(role => ({ id: role.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
 
@@ -189,19 +184,29 @@ client.on('interactionCreate', async interaction => {
       setTimeout(() => interaction.channel.delete().catch(console.error), 2000);
     }
 
+    // ----- BOTONES TIERS -----
+    if (['tier1','tier2','tier3'].includes(interaction.customId)) {
+      const rolId = IDs.rolesTiers[interaction.customId];
+      if (!rolId) return;
+
+      const rol = interaction.guild.roles.cache.get(rolId);
+      if (!rol) return;
+
+      if (interaction.member.roles.cache.has(rol.id)) {
+        await interaction.member.roles.remove(rol);
+        await interaction.reply({ content: `❌ Se te quitó el rol ${rol.name}`, ephemeral: true });
+      } else {
+        await interaction.member.roles.add(rol);
+        await interaction.reply({ content: `✅ Se te asignó el rol ${rol.name}`, ephemeral: true });
+      }
+    }
   }
 
-  // ----- COMANDOS SLASH -----
+  // ----- SLASH COMMANDS -----
   if (interaction.isChatInputCommand()) {
     const { commandName } = interaction;
-
-    // /ping
-    if (commandName === 'ping') {
-      await interaction.reply({ content: '🏓 Pong!', ephemeral: true });
-    }
-
-    // Los comandos de moderación (/warn, /mute, /ban) deben estar ya en otra parte
-    // y usan IDs de staff como antes
+    if (commandName === 'ping') await interaction.reply({ content: '🏓 Pong!', ephemeral: true });
+    // /mute, /warn, /ban deben registrarse aparte
   }
 });
 
@@ -209,7 +214,7 @@ client.on('interactionCreate', async interaction => {
 // REGISTRAR COMANDOS SLASH
 // --------------------------
 const commands = [
-  { name: 'ping', description: 'Comprueba si el bot está online' }
+  new SlashCommandBuilder().setName('ping').setDescription('Comprueba si el bot está online')
 ];
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
