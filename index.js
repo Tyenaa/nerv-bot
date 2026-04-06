@@ -9,6 +9,19 @@ const {
   EmbedBuilder 
 } = require('discord.js');
 
+const express = require('express'); // Para UptimeRobot
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// --------------------------
+// SERVIDOR WEB PARA UPTIMEROOT
+// --------------------------
+app.get('/', (req, res) => res.send('✅ NERV Bot Online!'));
+app.listen(PORT, () => console.log(`🌐 Servidor web corriendo en puerto ${PORT}`));
+
+// --------------------------
+// CLIENTE DE DISCORD
+// --------------------------
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -45,18 +58,17 @@ client.on('guildMemberAdd', async member => {
 });
 
 // --------------------------
-// PANEL TRYOUTS + EMBED DE TIERS
+// PANEL DE TIERS
 // --------------------------
 client.once('ready', async () => {
   console.log(`🔥 Bot listo como ${client.user.tag}`);
 
-  // --- CANAL DE TIERS ---
   try {
     const canalTiers = await client.channels.fetch('1490565371294650488'); // Canal Tiers
     const mensajesTiers = await canalTiers.messages.fetch({ limit: 5 });
 
     const embedTiers = new EmbedBuilder()
-      .setTitle('🎮 Tiers - Nerv Esports')
+      .setTitle('🎮 Tiers - NERV Esports')
       .setDescription('Aquí puedes ver los niveles competitivos de NERV y los rangos que entran en cada tier. Presiona el botón de tu tier para postularte y abrir un ticket.')
       .addFields(
         { name: 'Tier 1 🏆 - Profesionales', value: 'Rango: Jugador RLCS', inline: false },
@@ -67,7 +79,7 @@ client.once('ready', async () => {
       )
       .setColor('#E10600')
       .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
-      .setFooter({ text: '⚡ Nerv Esports - Compite, mejora y disfruta!' });
+      .setFooter({ text: '⚡ NERV Esports - Compite, mejora y disfruta!' });
 
     const botonesTiers = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('postular_t1').setLabel('🏆 Profesionales').setStyle(ButtonStyle.Danger),
