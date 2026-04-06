@@ -1,154 +1,154 @@
-const { 
-  Client, 
-  GatewayIntentBits,
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
-  ChannelType, 
-  PermissionsBitField, 
-  EmbedBuilder,
-  SlashCommandBuilder,
-  REST,
-  Routes
-} = require('discord.js');
-
+// index.js
+const { Client, GatewayIntentBits, Partials, Collection, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
-  ]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ],
+    partials: [Partials.Channel]
 });
+require('dotenv').config();
 
-console.log("🚀 Iniciando NERV Bot...");
-
-// ---------------- CONFIG ----------------
-const CLIENT_ID = '1490451848442941480';
+// --- IDS que me diste ---
 const GUILD_ID = '1490440780341448846';
-const CATEGORY_ID = '1490462544798810173';
-const CHANNEL_TIERS = '1490565371294650488';
+const WELCOME_CHANNEL_ID = 'TU_CANAL_DE_BIENVENIDA'; // reemplaza con el canal real si quieres
+const STAFF_LOG_CHANNEL = '1490581213159620659';
+const CLIENT_ID = '1490451848442941480';
 
-// ---------------- TIERS ----------------
-const tiers = [
-  { id: 1, name: "Profesionales", emoji: "🏆", rango: "RLCS Player" },
-  { id: 2, name: "Competitivos", emoji: "⚡", rango: "SSL a GC3" },
-  { id: 3, name: "Veteranos", emoji: "🎯", rango: "GC2 a C3" },
-  { id: 4, name: "Aspirantes", emoji: "📈", rango: "C2 a D3" },
-  { id: 5, name: "En progreso", emoji: "🔰", rango: "D2 para abajo" }
-];
+// Roles staff
+const STAFF_ROLES = {
+    owner: '1490466019720822884',
+    admin: '1490466026356342804',
+    mod: '1490466028545769473',
+    helper: '1490466913237602324'
+};
 
-// ---------------- READY ----------------
+// Roles automáticos
+const MEMBER_ROLE_NAME = 'Miembro';
+const MUTED_ROLE_NAME = 'Muted';
+
+// --- Comandos ---
+const commands = [
+    new SlashCommandBuilder().setName('ping').setDescription('Comprueba si el bot está activo'),
+    new SlashCommandBuilder().setName('warn').setDescription('Dar un warn a un usuario')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a advertir').setRequired(true))
+        .addStringOption(o => o.setName('razon').setDescription('Razón del warn').setRequired(true)),
+    new SlashCommandBuilder().setName('mute').setDescription('Silenciar a un usuario')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a mutear').setRequired(true))
+        .addStringOption(o => o.setName('duracion').setDescription('Duración del mute (ej: 10m, 1h)').setRequired(true)),
+    new SlashCommandBuilder().setName('ban').setDescription('Banea a un usuario')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a banear').setRequired(true))
+        .addStringOption(o => o.setName('razon').setDescription('Razón del baneo').setRequired(true)),
+    new SlashCommandBuilder().setName('kick').setDescription('Expulsa a un usuario')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a expulsar').setRequired(true))
+        .addStringOption(o => o.setName('razon').setDescription('Razón de la expulsión').setRequired(true)),
+].map(cmd => cmd.toJSON());
+
+// --- Registrar comandos ---
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+(async () => {
+    try {
+        console.log('🔄 Registrando comandos...');
+        await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
+        console.log('✅ Comandos registrados!');
+    } catch (err) {
+        console.error(err);
+    }
+})();
+
+// --- Inicio del bot ---
 client.once('ready', async () => {
-  console.log(`🔥 Bot listo como ${client.user.tag}`);
+    console.log(`🔥 Bot listo como ${client.user.tag}`);
 
-  // REGISTRAR COMANDOS
-  const commands = [
-    new SlashCommandBuilder()
-      .setName('ping')
-      .setDescription('Test del bot'),
+    const guild = await client.guilds.fetch(GUILD_ID);
+    const roles = await guild.roles.fetch();
 
-    new SlashCommandBuilder()
-      .setName('warn')
-      .setDescription('Dar warn')
-      .addUserOption(o=>o.setName('usuario').setRequired(true))
-      .addStringOption(o=>o.setName('razon').setRequired(true))
-  ].map(c=>c.toJSON());
-
-  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
-
-  await rest.put(
-    Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-    { body: commands }
-  );
-
-  console.log("✅ Comandos registrados");
-
-  // PANEL TIERS (solo si no existe)
-  const canal = await client.channels.fetch(CHANNEL_TIERS);
-  const msgs = await canal.messages.fetch({ limit: 5 });
-
-  if (msgs.size === 0) {
-    const row = new ActionRowBuilder();
-
-    tiers.forEach(t =>
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`tier_${t.id}`)
-          .setLabel(`${t.emoji} ${t.name}`)
-          .setStyle(ButtonStyle.Primary)
-      )
-    );
-
-    const embed = new EmbedBuilder()
-      .setTitle("Tiers NERV")
-      .setDescription("Selecciona tu tier");
-
-    await canal.send({ embeds: [embed], components: [row] });
-  }
+    // Crear roles automáticos si no existen
+    if (!roles.find(r => r.name === MUTED_ROLE_NAME)) await guild.roles.create({ name: MUTED_ROLE_NAME, color: 'GREY', reason: 'Rol de muteo automático' });
+    if (!roles.find(r => r.name === MEMBER_ROLE_NAME)) await guild.roles.create({ name: MEMBER_ROLE_NAME, color: 'BLUE', reason: 'Rol de miembros' });
 });
 
-// ---------------- INTERACCIONES ----------------
-client.on('interactionCreate', async interaction => {
+// --- Bienvenida + autorol ---
+client.on(Events.GuildMemberAdd, async member => {
+    const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    if (channel) channel.send(`Bienvenido/a ${member} al servidor! 🎉`);
 
-  // SLASH COMMANDS
-  if (interaction.isChatInputCommand()) {
-
-    if (interaction.commandName === 'ping') {
-      return interaction.reply("🏓 Pong");
-    }
-
-    if (interaction.commandName === 'warn') {
-      const user = interaction.options.getUser('usuario');
-      const razon = interaction.options.getString('razon');
-
-      return interaction.reply(`⚠️ ${user.tag} advertido: ${razon}`);
-    }
-  }
-
-  // BOTONES
-  if (interaction.isButton()) {
-
-    // TIERS
-    if (interaction.customId.startsWith('tier_')) {
-      await interaction.deferReply({ ephemeral: true });
-
-      const tierId = parseInt(interaction.customId.split('_')[1]);
-      const tier = tiers.find(t => t.id === tierId);
-
-      const nombre = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "");
-
-      const ticket = await interaction.guild.channels.create({
-        name: `tier-${nombre}`,
-        type: ChannelType.GuildText,
-        parent: CATEGORY_ID,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
-        ]
-      });
-
-      const embed = new EmbedBuilder()
-        .setTitle(`Postulación ${tier.name}`)
-        .setDescription(`Rango requerido: ${tier.rango}`);
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('cerrar')
-          .setLabel('Cerrar')
-          .setStyle(ButtonStyle.Danger)
-      );
-
-      await ticket.send({ embeds: [embed], components: [row] });
-
-      return interaction.editReply(`✅ Ticket creado: ${ticket}`);
-    }
-
-    // CERRAR
-    if (interaction.customId === 'cerrar') {
-      await interaction.reply({ content: "Cerrando...", ephemeral: true });
-      setTimeout(() => interaction.channel.delete(), 2000);
-    }
-  }
+    const memberRole = member.guild.roles.cache.find(r => r.name === MEMBER_ROLE_NAME);
+    if (memberRole) await member.roles.add(memberRole).catch(console.error);
 });
 
-// ---------------- LOGIN ----------------
+// --- Manejo de comandos ---
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+    const { commandName, options } = interaction;
+
+    const logChannel = await client.channels.fetch(STAFF_LOG_CHANNEL);
+
+    if (commandName === 'ping') await interaction.reply({ content: '🏓 Pong!', ephemeral: true });
+
+    if (commandName === 'warn') {
+        const user = options.getUser('usuario');
+        const reason = options.getString('razon');
+        await interaction.reply(`⚠️ ${user.tag} ha recibido un warn. Razón: ${reason}`);
+        logChannel.send(`**WARN**: ${user.tag} | ${interaction.user.tag} | Razón: ${reason}`);
+    }
+
+    if (commandName === 'mute') {
+        const user = options.getUser('usuario');
+        const duration = options.getString('duracion');
+        const guildMember = await interaction.guild.members.fetch(user.id);
+        const muteRole = interaction.guild.roles.cache.find(r => r.name === MUTED_ROLE_NAME);
+        if (!muteRole) return interaction.reply({ content: 'No existe el rol Muted', ephemeral: true });
+
+        await guildMember.roles.add(muteRole).catch(console.error);
+        await interaction.reply(`🔇 ${user.tag} ha sido muteado por ${duration}`);
+        logChannel.send(`**MUTE**: ${user.tag} | ${interaction.user.tag} | Duración: ${duration}`);
+    }
+
+    if (commandName === 'ban') {
+        const user = options.getUser('usuario');
+        const reason = options.getString('razon');
+        const guildMember = await interaction.guild.members.fetch(user.id);
+        await guildMember.ban({ reason }).catch(console.error);
+        await interaction.reply(`⛔ ${user.tag} ha sido baneado. Razón: ${reason}`);
+        logChannel.send(`**BAN**: ${user.tag} | ${interaction.user.tag} | Razón: ${reason}`);
+    }
+
+    if (commandName === 'kick') {
+        const user = options.getUser('usuario');
+        const reason = options.getString('razon');
+        const guildMember = await interaction.guild.members.fetch(user.id);
+        await guildMember.kick(reason).catch(console.error);
+        await interaction.reply(`👢 ${user.tag} ha sido expulsado. Razón: ${reason}`);
+        logChannel.send(`**KICK**: ${user.tag} | ${interaction.user.tag} | Razón: ${reason}`);
+    }
+});
+
+// --- Botones Tiers + Tryouts ---
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isButton()) return;
+
+    const tierData = {
+        t1: { name: 'Profesionales', emoji: '🏆', requirement: 'Top 2 SSL - Grand Champion 3' },
+        t2: { name: 'Competitivos', emoji: '⚡', requirement: 'Grand Champion 3' },
+        t3: { name: 'Veteranos', emoji: '🎯', requirement: 'Grand Champion 2 a Champion 3' },
+        t4: { name: 'Aspirantes', emoji: '📈', requirement: 'Champion 2 a Diamond 3' },
+        t5: { name: 'En Progreso', emoji: '🔰', requirement: 'Diamond 2 para abajo' }
+    };
+
+    if (tierData[interaction.customId]) {
+        const tier = tierData[interaction.customId];
+        await interaction.reply({
+            embeds: [{
+                title: 'Postulación para Tiers',
+                description: `Estás por postularte al tier **${tier.name}** ${tier.emoji}\nRequisitos: ${tier.requirement}\nPor favor indica tu rango actual y tu ID del juego.`,
+                color: 0x00FF00
+            }],
+            ephemeral: true
+        });
+    }
+});
+
 client.login(process.env.DISCORD_TOKEN);
