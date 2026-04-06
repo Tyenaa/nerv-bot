@@ -7,16 +7,15 @@ const {
   ChannelType, 
   PermissionsBitField, 
   EmbedBuilder,
-  Collection,
-  SlashCommandBuilder
+  Collection
 } = require('discord.js');
 
 require('dotenv').config();
 const TOKEN = process.env.DISCORD_TOKEN;
 
-// -----------------
+// --------------------------
 // IDS
-// -----------------
+// --------------------------
 const IDs = {
   roles: {
     miembro: '1490466327045869628',
@@ -33,9 +32,9 @@ const IDs = {
   }
 };
 
-// -----------------
+// --------------------------
 // CLIENT
-// -----------------
+// --------------------------
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -47,16 +46,14 @@ const client = new Client({
 
 console.log("🚀 Iniciando NERV Bot...");
 
-// -----------------
+// --------------------------
 // AUTOROL + BIENVENIDA
-// -----------------
+// --------------------------
 client.on('guildMemberAdd', async member => {
   try {
-    // Dar rol Miembro
     const rolMiembro = member.guild.roles.cache.get(IDs.roles.miembro);
     if (rolMiembro) await member.roles.add(rolMiembro);
 
-    // Embed de bienvenida
     const canalBienvenida = member.guild.channels.cache.get(IDs.channels.bienvenida);
     if (canalBienvenida) {
       const embedBienvenida = new EmbedBuilder()
@@ -69,64 +66,204 @@ client.on('guildMemberAdd', async member => {
 
       await canalBienvenida.send({ embeds: [embedBienvenida] });
     }
+
   } catch (error) {
-    console.error("❌ Error en bienvenida/autorol:", error);
+    console.error("❌ Error al asignar rol o enviar bienvenida:", error);
   }
 });
 
-// -----------------
+// --------------------------
 // WARN STORAGE
-// -----------------
+// --------------------------
 const warns = new Collection(); // userId -> [{ staff, reason, date }]
 
-// -----------------
-// SLASH COMMANDS
-// -----------------
+// --------------------------
+// TIER ROLES
+// --------------------------
+const tierRoles = {
+  postular_t1: { id: '1490563096610078862', name: 'Profesionales', emoji: '🏆', requisitos: 'Jugador RLCS' },
+  postular_t2: { id: '1490563098937921748', name: 'Competitivos', emoji: '⚡', requisitos: 'SSL → Grand Champion 3' },
+  postular_t3: { id: '1490563101479931964', name: 'Veteranos', emoji: '🎯', requisitos: 'Grand Champion 2 → Champion 3' },
+  postular_t4: { id: '1490563105736884325', name: 'Aspirantes', emoji: '📈', requisitos: 'Champion 2 → Diamond 3' },
+  postular_t5: { id: '1490563136783126710', name: 'En progreso', emoji: '🔰', requisitos: 'Diamond 2 → Bronze 1' }
+};
+
+// --------------------------
+// READY: TRYOUTS + TIER PANELS
+// --------------------------
 client.once('ready', async () => {
   console.log(`🔥 Bot listo como ${client.user.tag}`);
 
-  // Panel Tryouts y Tiers
-  const panels = [
-    { canalId: IDs.channels.apply, customId: 'crear_ticket_tryout', label: 'Abrir Tryout', style: ButtonStyle.Danger },
-    { canalId: IDs.channels.tiers, customId: 'crear_ticket_tier', label: 'Abrir Tier', style: ButtonStyle.Primary }
-  ];
-
-  for (const panel of panels) {
-    try {
-      const canal = await client.channels.fetch(panel.canalId);
-      const mensajes = await canal.messages.fetch({ limit: 1 });
-      if (mensajes.size === 0) {
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(panel.customId).setLabel(panel.label).setStyle(panel.style)
-        );
-        await canal.send({ content: `🎟️ Presiona el botón para ${panel.label.toLowerCase()}.`, components: [row] });
-      }
-    } catch (error) {
-      console.error("❌ Error creando panel:", error);
+  // --- Tryouts ---
+  try {
+    const canalApplys = await client.channels.fetch(IDs.channels.apply);
+    const mensajes = await canalApplys.messages.fetch({ limit: 1 });
+    if (mensajes.size === 0) {
+      const botonRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('crear_ticket')
+          .setLabel('Abrir Tryout')
+          .setStyle(ButtonStyle.Danger)
+      );
+      await canalApplys.send({ content: "🎟️ Presiona el botón para aplicar al tryout.", components: [botonRow] });
     }
+  } catch (error) {
+    console.error("❌ Error panel tryouts:", error);
+  }
+
+  // --- Tiers ---
+  try {
+    const canalTiers = await client.channels.fetch(IDs.channels.tiers);
+    const mensajesTiers = await canalTiers.messages.fetch({ limit: 5 });
+
+    const embedTiers = new EmbedBuilder()
+      .setTitle('🎮 Tiers - Nerv Esports')
+      .setDescription('Aquí puedes ver los niveles competitivos de NERV y los rangos que entran en cada tier. Presiona el botón de tu tier para postularte y abrir un ticket.')
+      .addFields(
+        { name: 'Tier 1 🏆 - Profesionales', value: 'Rango: Jugador RLCS', inline: false },
+        { name: 'Tier 2 ⚡ - Competitivos', value: 'Rango: SSL → Grand Champion 3', inline: false },
+        { name: 'Tier 3 🎯 - Veteranos', value: 'Rango: Grand Champion 2 → Champion 3', inline: false },
+        { name: 'Tier 4 📈 - Aspirantes', value: 'Rango: Champion 2 → Diamond 3', inline: false },
+        { name: 'Tier 5 🔰 - En progreso', value: 'Rango: Diamond 2 → Bronze 1', inline: false }
+      )
+      .setColor('#E10600')
+      .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
+      .setFooter({ text: '⚡ Nerv Esports - Compite, mejora y disfruta!' });
+
+    const botonesTiers = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('postular_t1').setLabel('🏆 Profesionales').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t2').setLabel('⚡ Competitivos').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t3').setLabel('🎯 Veteranos').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t4').setLabel('📈 Aspirantes').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('postular_t5').setLabel('🔰 En progreso').setStyle(ButtonStyle.Danger)
+    );
+
+    if (mensajesTiers.size === 0) {
+      await canalTiers.send({ embeds: [embedTiers], components: [botonesTiers] });
+      console.log('✅ Embed de Tiers enviado.');
+    }
+
+  } catch (error) {
+    console.error('❌ Error enviando embed de Tiers:', error);
   }
 });
 
-// -----------------
-// INTERACTIONS
-// -----------------
+// --------------------------
+// INTERACTIONS: TICKETS + TIER
+// --------------------------
 client.on('interactionCreate', async interaction => {
-  // Ping
-  if (interaction.isChatInputCommand() && interaction.commandName === 'ping') {
-    return interaction.reply({ content: '🏓 Pong!', ephemeral: true });
+  if (interaction.isButton()) {
+
+    // ----- Tryout -----
+    if (interaction.customId === 'crear_ticket') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const nombre = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
+        const categoria = interaction.guild.channels.cache.get(IDs.channels.tryoutsCategory);
+        if (!categoria) throw new Error("Categoría de tickets no encontrada.");
+
+        const rolesParaVer = IDs.roles.staffRoles.map(id => interaction.guild.roles.cache.get(id))
+          .filter(r => r)
+          .map(r => ({ id: r.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
+
+        const permisoOverwrites = [
+          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
+          ...rolesParaVer
+        ];
+
+        const ticket = await interaction.guild.channels.create({
+          name: `tryout-${nombre}`,
+          type: ChannelType.GuildText,
+          parent: categoria.id,
+          permissionOverwrites: permisoOverwrites
+        });
+
+        const embedTicket = new EmbedBuilder()
+          .setTitle(`🎯 Tryout de ${interaction.user.username}`)
+          .setDescription("Responde las siguientes preguntas dentro de este ticket:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?")
+          .setColor('#00FFFF');
+
+        const cerrarRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('❌ Cerrar Ticket').setStyle(ButtonStyle.Danger)
+        );
+
+        await ticket.send({ embeds: [embedTicket], components: [cerrarRow] });
+        await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
+
+      } catch (error) {
+        console.error("❌ ERROR REAL:", error);
+        await interaction.editReply({ content: `❌ Error creando el ticket: ${error.message}` });
+      }
+    }
+
+    // ----- Tiers -----
+    if (Object.keys(tierRoles).includes(interaction.customId)) {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const tier = tierRoles[interaction.customId];
+        const nombreUsuario = interaction.user.username.replace(/[^a-zA-Z0-9]/g, "") || 'usuario';
+        const categoria = interaction.guild.channels.cache.get(IDs.channels.tryoutsCategory);
+
+        const rolesParaVer = IDs.roles.staffRoles.map(id => interaction.guild.roles.cache.get(id))
+          .filter(r => r)
+          .map(r => ({ id: r.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
+
+        const permisoOverwrites = [
+          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
+          ...rolesParaVer
+        ];
+
+        const ticket = await interaction.guild.channels.create({
+          name: `tier-${nombreUsuario}`,
+          type: ChannelType.GuildText,
+          parent: categoria.id,
+          permissionOverwrites: permisoOverwrites
+        });
+
+        // Asignar rol del Tier
+        const rolTier = interaction.guild.roles.cache.get(tier.id);
+        if (rolTier) await interaction.member.roles.add(rolTier);
+
+        const embedTicket = new EmbedBuilder()
+          .setTitle(`🎮 Postulación para Tiers`)
+          .setDescription(`¡Estás por postularte al **${tier.name} ${tier.emoji}**!\n\n**Requisitos:** ${tier.requisitos}\n**Rango actual:** Indica tu rango actual\n**Prueba:** Envía evidencia de tu nivel actual\n**ID del juego:** Tu ID para verificación`)
+          .setColor('#00FFFF');
+
+        const cerrarRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('❌ Cerrar Ticket').setStyle(ButtonStyle.Danger)
+        );
+
+        await ticket.send({ embeds: [embedTicket], components: [cerrarRow] });
+        await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
+
+      } catch (error) {
+        console.error("❌ Error creando ticket por Tier:", error);
+        await interaction.editReply({ content: `❌ Error creando ticket: ${error.message}` });
+      }
+    }
+
+    // ----- Cerrar ticket -----
+    if (interaction.customId === 'cerrar_ticket') {
+      await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
+      setTimeout(() => {
+        interaction.channel.delete().catch(console.error);
+      }, 2000);
+    }
   }
 
-  // Moderación: Slash Commands
+  // ----- Comandos de moderación -----
   if (interaction.isChatInputCommand()) {
     const member = interaction.options.getMember('usuario');
     const razon = interaction.options.getString('razon') || 'No especificada';
     const logChannel = interaction.guild.channels.cache.get(IDs.channels.staffLog);
 
     if (!interaction.member.roles.cache.some(r => IDs.roles.staffRoles.includes(r.id))) {
-      return interaction.reply({ content: '❌ No tienes permisos para usar este comando.', ephemeral: true });
+      return interaction.reply({ content: '❌ No tienes permisos.', ephemeral: true });
     }
 
-    // ----- WARN -----
+    // WARN
     if (interaction.commandName === 'warn') {
       if (!warns.has(member.id)) warns.set(member.id, []);
       warns.get(member.id).push({ staff: interaction.user.tag, reason: razon, date: new Date() });
@@ -146,11 +283,11 @@ client.on('interactionCreate', async interaction => {
       if (logChannel) await logChannel.send({ embeds: [embed] });
     }
 
-    // ----- MUTE -----
+    // MUTE
     if (interaction.commandName === 'mute') {
       const duracion = interaction.options.getString('duracion') || '10m';
       const muteRole = interaction.guild.roles.cache.get(IDs.roles.muted);
-      if (!muteRole) return interaction.reply({ content: '❌ No existe el rol Muted.', ephemeral: true });
+      if (!muteRole) return interaction.reply({ content: '❌ Rol Muted no existe', ephemeral: true });
 
       await member.roles.add(muteRole);
       const embed = new EmbedBuilder()
@@ -175,12 +312,12 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    // ----- UNMUTE -----
+    // UNMUTE
     if (interaction.commandName === 'unmute') {
       const muteRole = interaction.guild.roles.cache.get(IDs.roles.muted);
-      if (!muteRole) return interaction.reply({ content: '❌ No existe el rol Muted.', ephemeral: true });
-
+      if (!muteRole) return interaction.reply({ content: '❌ Rol Muted no existe', ephemeral: true });
       await member.roles.remove(muteRole);
+
       const embed = new EmbedBuilder()
         .setTitle('🔊 Usuario Desmuteado')
         .addFields(
@@ -194,7 +331,7 @@ client.on('interactionCreate', async interaction => {
       if (logChannel) await logChannel.send({ embeds: [embed] });
     }
 
-    // ----- BAN -----
+    // BAN
     if (interaction.commandName === 'ban') {
       await member.ban({ reason: razon });
       const embed = new EmbedBuilder()
@@ -211,7 +348,7 @@ client.on('interactionCreate', async interaction => {
       if (logChannel) await logChannel.send({ embeds: [embed] });
     }
 
-    // ----- UNBAN -----
+    // UNBAN
     if (interaction.commandName === 'unban') {
       const userId = interaction.options.getString('usuario_id');
       await interaction.guild.bans.remove(userId);
@@ -227,56 +364,15 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ content: `✅ Usuario con ID ${userId} desbaneado.`, ephemeral: true });
       if (logChannel) await logChannel.send({ embeds: [embed] });
     }
-  }
 
-  // ----- BOTONES TRYOUTS / TIERS -----
-  if (interaction.isButton()) {
-    const rolesStaff = IDs.roles.staffRoles.map(id => interaction.guild.roles.cache.get(id))
-      .filter(r => r)
-      .map(r => ({ id: r.id, allow: [PermissionsBitField.Flags.ViewChannel] }));
-
-    const categoria = interaction.guild.channels.cache.get(IDs.channels.tryoutsCategory);
-    if (!categoria) return;
-
-    if (interaction.customId === 'crear_ticket_tryout' || interaction.customId === 'crear_ticket_tier') {
-      await interaction.deferReply({ ephemeral: true });
-
-      const tipo = interaction.customId.includes('tier') ? 'tier' : 'tryout';
-      const ticket = await interaction.guild.channels.create({
-        name: `${tipo}-${interaction.user.username.replace(/[^a-zA-Z0-9]/g,'')}`,
-        type: ChannelType.GuildText,
-        parent: categoria.id,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
-          ...rolesStaff
-        ]
-      });
-
-      const embed = new EmbedBuilder()
-        .setTitle(tipo === 'tier' ? `📊 Aplicación de TIER de ${interaction.user.username}` : `🎯 Tryout de ${interaction.user.username}`)
-        .setDescription(tipo === 'tier' ? 
-          "Indica tu Tier:\n🏆 Tier 1 - Profesionales\n⚡ Tier 2 - Competitivos\n🎯 Tier 3 - Veteranos\n📈 Tier 4 - Aspirantes\n🔰 Tier 5 - En progreso" :
-          "Responde las preguntas:\n- Rango actual\n- Plataforma\n- Horas jugadas\n- ¿Por qué quieres unirte a NERV?"
-        )
-        .setColor(tipo === 'tier' ? '#FFD700' : '#00FFFF');
-
-      const cerrarRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('❌ Cerrar Ticket').setStyle(ButtonStyle.Danger)
-      );
-
-      await ticket.send({ embeds: [embed], components: [cerrarRow] });
-      await interaction.editReply({ content: `✅ Ticket creado: ${ticket}` });
-    }
-
-    if (interaction.customId === 'cerrar_ticket') {
-      await interaction.reply({ content: '🧹 Cerrando ticket...', ephemeral: true });
-      setTimeout(() => interaction.channel.delete().catch(console.error), 2000);
+    // PING
+    if (interaction.commandName === 'ping') {
+      await interaction.reply({ content: '🏓 Pong!', ephemeral: true });
     }
   }
 });
 
-// -----------------
-// LOGIN
-// -----------------
+// --------------------------
+// LOGIN BOT
+// --------------------------
 client.login(TOKEN);
