@@ -36,6 +36,125 @@ const PANEL = 'https://media.discordapp.net/attachments/1490445497318641670/1490
 const WELCOME = 'https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png';
 const LOGO = 'https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png';
 
+const RULES = {
+  es: {
+    intro: `⚡ Bienvenido a NERV
+Servidor competitivo donde vienes a mejorar, competir y dominar.`,
+    fields: [
+      ['🧠 RESPETO',`Sin insultos
+Respeta a todos
+Cero discriminación`],
+      ['🚫 PROHIBIDO',`Nada NSFW
+No spam
+No links sospechosos`],
+      ['🎮 CANALES',`Usa cada canal correctamente
+Evita spam o mayúsculas`],
+      ['🛡️ STAFF',`Respeta admins y mods
+Decisiones finales`],
+      ['⚔️ COMPETITIVO',`Sin trampas
+Juega limpio
+Actitud profesional`],
+      ['🤝 COMUNIDAD',`Apoya
+Sin drama
+Aporta valor`],
+      ['📢 PROMOCIÓN',`Sin promo sin permiso
+No spam por DM`],
+      ['🔊 VOZ',`No gritar
+Mic limpio
+Respeto`],
+      ['⚠️ SANCIONES',`Warn ⚠️
+Mute 🔇
+Kick 🚪
+Ban 🔨`]
+    ],
+    footer: '🧾 Si sabes que está mal… no lo hagas.'
+  },
+  en: {
+    intro: `⚡ Welcome to NERV
+Competitive server where you improve, compete and dominate.`,
+    fields: [
+      ['🧠 RESPECT',`No insults
+Respect everyone
+Zero discrimination`],
+      ['🚫 FORBIDDEN',`No NSFW
+No spam
+No suspicious links`],
+      ['🎮 CHANNELS',`Use channels correctly
+Avoid spam`],
+      ['🛡️ STAFF',`Respect admins and mods
+Final decisions`],
+      ['⚔️ COMPETITIVE',`No cheating
+Play fair
+Professional attitude`],
+      ['🤝 COMMUNITY',`Support others
+No drama
+Bring value`],
+      ['📢 PROMOTION',`No promo without permission
+No DM spam`],
+      ['🔊 VOICE',`No screaming
+Clean mic
+Respect`],
+      ['⚠️ PUNISHMENTS',`Warn ⚠️
+Mute 🔇
+Kick 🚪
+Ban 🔨`]
+    ],
+    footer: '🧾 If you know it is wrong… don’t do it.'
+  },
+  pt: {
+    intro: `⚡ Bem-vindo à NERV
+Servidor competitivo para melhorar, competir e dominar.`,
+    fields: [
+      ['🧠 RESPEITO',`Sem insultos
+Respeite todos
+Zero discriminação`],
+      ['🚫 PROIBIDO',`Nada NSFW
+Sem spam
+Sem links suspeitos`],
+      ['🎮 CANAIS',`Use os canais corretamente
+Evite spam`],
+      ['🛡️ STAFF',`Respeite admins e mods
+Decisões finais`],
+      ['⚔️ COMPETITIVO',`Sem trapaças
+Jogue limpo`],
+      ['🤝 COMUNIDADE',`Apoie
+Sem drama
+Agregue valor`],
+      ['📢 PROMOÇÃO',`Sem promoção sem permissão`],
+      ['🔊 VOZ',`Não gritar
+Microfone limpo`],
+      ['⚠️ PUNIÇÕES',`Warn ⚠️
+Mute 🔇
+Kick 🚪
+Ban 🔨`]
+    ],
+    footer: '🧾 Se você sabe que está errado… não faça.'
+  },
+  fr: {
+    intro: `⚡ Bienvenue à NERV
+Serveur compétitif pour progresser et dominer.`,
+    fields: [
+      ['🧠 RESPECT',`Pas d’insultes
+Respecte tout le monde`],
+      ['🚫 INTERDIT',`Pas de NSFW
+Pas de spam`],
+      ['🎮 CANAUX',`Utilise les salons correctement`],
+      ['🛡️ STAFF',`Respecte admins et mods`],
+      ['⚔️ COMPÉTITIF',`Pas de triche
+Joue fair-play`],
+      ['🤝 COMMUNAUTÉ',`Soutiens les autres`],
+      ['📢 PROMOTION',`Pas de promo sans permission`],
+      ['🔊 VOCAL',`Ne crie pas
+Micro propre`],
+      ['⚠️ SANCTIONS',`Warn ⚠️
+Mute 🔇
+Kick 🚪
+Ban 🔨`]
+    ],
+    footer: '🧾 Si tu sais que c’est mal… ne le fais pas.'
+  }
+};
+
 const LANGS = [
   {
     code:'es', name:'Español', emoji:'🇪🇸',
@@ -164,15 +283,17 @@ client.once('ready', async () => {
 
   if (reglas) {
     for (const lang of LANGS) {
+      const rule = RULES[lang.code];
       const embed = new EmbedBuilder()
         .setTitle(`${lang.emoji} ${lang.rulesTitle}`)
-        .setDescription(`Respeta a todos
-No spam
-No NSFW`)
+        .setDescription(rule.intro)
         .setColor('#E10600')
         .setImage(PANEL)
-        .setThumbnail(LOGO);
-      await reglas.send({embeds:[embed]});
+        .setThumbnail(LOGO)
+        .setFooter({ text: rule.footer })
+        .addFields(...rule.fields.map(([name, value]) => ({ name, value, inline: true })));
+
+      await reglas.send({ embeds: [embed] });
     }
   }
 
