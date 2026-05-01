@@ -246,7 +246,7 @@ async function createTicket(interaction, type, data) {
   }
 
   const channel = await interaction.guild.channels.create({
-    name: `${type}-${interaction.user.id}`,
+    name: `${type}-${interaction.customId?.split('_').pop() || 'es'}-${interaction.user.id}`,
     type: ChannelType.GuildText,
     parent: IDS.categoria,
     permissionOverwrites: [
@@ -352,22 +352,33 @@ client.on('interactionCreate', async interaction => {
   if (interaction.isButton()) {
 
     if (interaction.customId.startsWith('tryout_')) {
-      const modal = new ModalBuilder().setCustomId('tryout_modal').setTitle('Tryout');
+      const langCode = interaction.customId.split('_')[1];
+      const lang = LANGS.find(l => l.code === langCode) || LANGS[0];
+      const modal = new ModalBuilder()
+        .setCustomId(`tryout_modal_${langCode}`)
+        .setTitle(lang.buttonTryout);
+
       modal.addComponents(
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ID').setLabel('ID Juego').setStyle(TextInputStyle.Short)),
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Rango').setLabel('Rango').setStyle(TextInputStyle.Short)),
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Horas').setLabel('Horas').setStyle(TextInputStyle.Short)),
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph))
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ID').setLabel(lang.code === 'en' ? 'Game ID' : lang.code === 'pt' ? 'ID do Jogo' : lang.code === 'fr' ? 'ID du Jeu' : 'ID Juego').setStyle(TextInputStyle.Short)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Rango').setLabel(lang.code === 'en' ? 'Current Rank' : lang.code === 'pt' ? 'Rank Atual' : lang.code === 'fr' ? 'Rang Actuel' : 'Rango').setStyle(TextInputStyle.Short)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Horas').setLabel(lang.code === 'en' ? 'Hours Played' : lang.code === 'pt' ? 'Horas Jogadas' : lang.code === 'fr' ? 'Heures Jouées' : 'Horas').setStyle(TextInputStyle.Short)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Motivo').setLabel(lang.code === 'en' ? 'Why join NERV?' : lang.code === 'pt' ? 'Por que entrar na NERV?' : lang.code === 'fr' ? 'Pourquoi rejoindre NERV ?' : 'Motivo').setStyle(TextInputStyle.Paragraph))
       );
+
       return interaction.showModal(modal);
     }
 
     if (interaction.customId.startsWith('tier')) {
-      const modal = new ModalBuilder().setCustomId('tier_modal').setTitle('Tier');
+      const langCode = interaction.customId.split('_')[1];
+      const modal = new ModalBuilder()
+        .setCustomId(`tier_modal_${langCode}`)
+        .setTitle('Tier');
+
       modal.addComponents(
         new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Rango').setLabel('Rango (Rocket Tracker)').setStyle(TextInputStyle.Short)),
         new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ID').setLabel('ID Juego').setStyle(TextInputStyle.Short))
       );
+
       return interaction.showModal(modal);
     }
 
@@ -381,11 +392,11 @@ client.on('interactionCreate', async interaction => {
     const data = {};
     interaction.fields.fields.forEach(f => data[f.customId] = f.value);
 
-    if (interaction.customId === 'tryout_modal') {
+    if (interaction.customId.startsWith('tryout_modal')) {
       return createTicket(interaction, 'tryout', data);
     }
 
-    if (interaction.customId === 'tier_modal') {
+    if (interaction.customId.startsWith('tier_modal')) {
       return createTicket(interaction, 'tier', data);
     }
   }
