@@ -246,7 +246,7 @@ async function createTicket(interaction, type, data) {
   }
 
   const channel = await interaction.guild.channels.create({
-    name: `${type}-${interaction.customId?.split('_').pop() || 'es'}-${interaction.user.id}`,
+    name: `${type}-${interaction.customId?.split('_').pop() || 'es'}-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g,'')}`,
     type: ChannelType.GuildText,
     parent: IDS.categoria,
     permissionOverwrites: [
@@ -369,14 +369,37 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId.startsWith('tier')) {
-      const langCode = interaction.customId.split('_')[1];
+      const parts = interaction.customId.split('_');
+      const tierNum = parts[0].replace('tier','');
+      const langCode = parts[1];
+      const lang = LANGS.find(l => l.code === langCode) || LANGS[0];
+
+      const tierQuestions = {
+        es: { title:`Tier ${tierNum}`, rank:'¿En qué rango estás? (Rocket Tracker)', id:'ID del juego' },
+        en: { title:`Tier ${tierNum}`, rank:'What rank are you? (Rocket Tracker)', id:'Game ID' },
+        pt: { title:`Tier ${tierNum}`, rank:'Qual é seu rank? (Rocket Tracker)', id:'ID do jogo' },
+        fr: { title:`Tier ${tierNum}`, rank:'Quel est ton rang ? (Rocket Tracker)', id:'ID du jeu' }
+      };
+
+      const txt = tierQuestions[langCode] || tierQuestions.es;
+
       const modal = new ModalBuilder()
         .setCustomId(`tier_modal_${langCode}`)
-        .setTitle('Tier');
+        .setTitle(txt.title);
 
       modal.addComponents(
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('Rango').setLabel('Rango (Rocket Tracker)').setStyle(TextInputStyle.Short)),
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ID').setLabel('ID Juego').setStyle(TextInputStyle.Short))
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('Rango')
+            .setLabel(txt.rank)
+            .setStyle(TextInputStyle.Short)
+        ),
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('ID')
+            .setLabel(txt.id)
+            .setStyle(TextInputStyle.Short)
+        )
       );
 
       return interaction.showModal(modal);
