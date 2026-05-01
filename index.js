@@ -4,13 +4,15 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
   ChannelType,
   PermissionsBitField,
   EmbedBuilder
 } = require('discord.js');
+
+// ==========================
+// TOKEN (Railway)
+// ==========================
+const TOKEN = process.env.DISCORD_TOKEN;
 
 // ==========================
 // IDs
@@ -30,6 +32,15 @@ const IDS = {
 };
 
 // ==========================
+// IMÁGENES
+// ==========================
+const BANNER =
+  'https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png';
+
+const LOGO =
+  'https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png';
+
+// ==========================
 // CLIENT
 // ==========================
 const client = new Client({
@@ -42,86 +53,135 @@ const client = new Client({
 console.log('🚀 Iniciando NERV Bot...');
 
 // ==========================
-// TEXTOS
+// IDIOMAS
 // ==========================
-const languages = [
+const LANGS = [
   {
     code: 'es',
-    name: 'Español',
-    ticket: 'español',
     emoji: '🇪🇸',
-    tryoutButton: 'Abrir Tryout',
-    tierButton: 'Abrir Tiers',
-    rulesTitle: '📜 REGLAS NERV',
+    name: 'Español',
+    ticket: 'espanol',
+
+    tryoutTitle: '🎟️ Tryouts - NERV',
+    tryoutDesc: 'Presiona el botón para abrir tu tryout.',
+    tryoutBtn: 'Abrir Tryout',
+
+    tierTitle: '🎮 Tiers - NERV',
+    tierDesc: 'Presiona el botón para abrir tu ticket de tiers.',
+    tierBtn: 'Abrir Tier',
+
+    rulesTitle: '📜 Reglas - NERV',
     rules: [
-      'Respeta a todos los miembros',
+      'Respeta a todos',
       'No spam',
       'No NSFW',
       'No toxicidad extrema',
-      'Usa los canales correctamente',
-      'No compartas información privada',
-      'Sigue al staff',
+      'Usa canales correctamente',
+      'No compartas datos privados',
+      'Sigue instrucciones del staff',
       'No cheats'
-    ]
+    ],
+
+    footer: '⚡ NERV - Compite, mejora y disfruta!'
   },
+
   {
     code: 'en',
+    emoji: '🇬🇧',
     name: 'English',
     ticket: 'english',
-    emoji: '🇬🇧',
-    tryoutButton: 'Open Tryout',
-    tierButton: 'Open Tiers',
-    rulesTitle: '📜 NERV RULES',
+
+    tryoutTitle: '🎟️ Tryouts - NERV',
+    tryoutDesc: 'Press the button to open your tryout.',
+    tryoutBtn: 'Open Tryout',
+
+    tierTitle: '🎮 Tiers - NERV',
+    tierDesc: 'Press the button to open your tier ticket.',
+    tierBtn: 'Open Tier',
+
+    rulesTitle: '📜 Rules - NERV',
     rules: [
-      'Respect all members',
+      'Respect everyone',
       'No spam',
       'No NSFW',
       'No extreme toxicity',
       'Use channels correctly',
       'Do not share private info',
-      'Follow staff',
+      'Follow staff instructions',
       'No cheats'
-    ]
+    ],
+
+    footer: '⚡ NERV - Compete, improve and enjoy!'
   },
+
   {
     code: 'pt',
+    emoji: '🇵🇹',
     name: 'Português',
     ticket: 'portuguese',
-    emoji: '🇵🇹',
-    tryoutButton: 'Abrir Tryout',
-    tierButton: 'Abrir Tiers',
-    rulesTitle: '📜 REGRAS NERV',
+
+    tryoutTitle: '🎟️ Tryouts - NERV',
+    tryoutDesc: 'Clique no botão para abrir seu tryout.',
+    tryoutBtn: 'Abrir Tryout',
+
+    tierTitle: '🎮 Tiers - NERV',
+    tierDesc: 'Clique no botão para abrir seu ticket.',
+    tierBtn: 'Abrir Tier',
+
+    rulesTitle: '📜 Regras - NERV',
     rules: [
       'Respeite todos',
       'Sem spam',
       'Sem NSFW',
-      'Sem toxicidade',
+      'Sem toxicidade extrema',
       'Use canais corretamente',
       'Não compartilhe dados privados',
       'Siga a staff',
       'Sem cheats'
-    ]
+    ],
+
+    footer: '⚡ NERV - Compita, melhore e aproveite!'
   },
+
   {
     code: 'fr',
+    emoji: '🇫🇷',
     name: 'Français',
     ticket: 'francais',
-    emoji: '🇫🇷',
-    tryoutButton: 'Ouvrir Tryout',
-    tierButton: 'Ouvrir Tiers',
-    rulesTitle: '📜 RÈGLES NERV',
+
+    tryoutTitle: '🎟️ Tryouts - NERV',
+    tryoutDesc: 'Appuyez sur le bouton pour ouvrir votre tryout.',
+    tryoutBtn: 'Ouvrir Tryout',
+
+    tierTitle: '🎮 Tiers - NERV',
+    tierDesc: 'Appuyez sur le bouton pour ouvrir votre ticket.',
+    tierBtn: 'Ouvrir Tier',
+
+    rulesTitle: '📜 Règles - NERV',
     rules: [
       'Respectez tout le monde',
       'Pas de spam',
       'Pas de NSFW',
-      'Pas de toxicité',
-      'Utilisez les salons',
-      'Ne partagez pas d’infos privées',
+      'Pas de toxicité extrême',
+      'Utilisez les salons correctement',
+      'Ne partagez pas les données privées',
       'Suivez le staff',
       'Pas de cheats'
-    ]
+    ],
+
+    footer: '⚡ NERV - Compétez, améliorez et profitez!'
   }
 ];
+
+// ==========================
+// LIMPIAR CANAL
+// ==========================
+async function clearChannel(channel) {
+  const msgs = await channel.messages.fetch({ limit: 100 });
+  if (msgs.size > 0) {
+    await channel.bulkDelete(msgs, true).catch(() => {});
+  }
+}
 
 // ==========================
 // AUTOROL + BIENVENIDA
@@ -131,22 +191,23 @@ client.on('guildMemberAdd', async member => {
     const role = member.guild.roles.cache.get(IDS.MEMBER_ROLE);
     if (role) await member.roles.add(role);
 
-    const channel = member.guild.channels.cache.get(IDS.WELCOME_CHANNEL);
-    if (!channel) return;
+    const welcome = member.guild.channels.cache.get(IDS.WELCOME_CHANNEL);
+    if (!welcome) return;
 
     const embed = new EmbedBuilder()
-      .setTitle('🎉 Welcome to NERV / Bienvenido / Bem-vindo / Bienvenue ⚡')
-      .setDescription(`
-🇪🇸 Bienvenido a NERV, ${member}  
-🇬🇧 Welcome to NERV, ${member}  
-🇵🇹 Bem-vindo à NERV, ${member}  
-🇫🇷 Bienvenue à NERV, ${member}
-      `)
-      .setImage('https://media.discordapp.net/attachments/1490445497318641670/1490484413081845830/Gemini_Generated_Image_sqh3sisqh3sisqh3_1.png')
-      .setThumbnail('https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png')
-      .setColor('#8A2BE2');
+      .setTitle('🎉 Welcome to NERV! ⚡')
+      .setDescription(
+`🇪🇸 Bienvenido ${member}, disfruta NERV.
+🇬🇧 Welcome ${member}, enjoy NERV.
+🇵🇹 Bem-vindo ${member}, aproveite a NERV.
+🇫🇷 Bienvenue ${member}, profitez de NERV.`
+      )
+      .setImage(BANNER)
+      .setThumbnail(LOGO)
+      .setColor('#8A2BE2')
+      .setFooter({ text: '⚡ NERV Community' });
 
-    await channel.send({ embeds: [embed] });
+    await welcome.send({ embeds: [embed] });
 
   } catch (e) {
     console.error(e);
@@ -154,18 +215,10 @@ client.on('guildMemberAdd', async member => {
 });
 
 // ==========================
-// LIMPIAR CANAL
-// ==========================
-async function clearChannel(channel) {
-  const msgs = await channel.messages.fetch({ limit: 100 });
-  if (msgs.size) await channel.bulkDelete(msgs, true);
-}
-
-// ==========================
 // READY
 // ==========================
 client.once('ready', async () => {
-  console.log(`🔥 ${client.user.tag}`);
+  console.log(`🔥 Bot listo como ${client.user.tag}`);
 
   const rules = await client.channels.fetch(IDS.RULES_CHANNEL);
   const tryouts = await client.channels.fetch(IDS.TRYOUTS_CHANNEL);
@@ -176,84 +229,112 @@ client.once('ready', async () => {
   await clearChannel(tiers);
 
   // REGLAS
-  for (const lang of languages) {
+  for (const lang of LANGS) {
     const embed = new EmbedBuilder()
       .setTitle(`${lang.emoji} ${lang.rulesTitle}`)
       .setDescription(
         lang.rules.map((r, i) => `${i + 1}. ${r}`).join('\n')
       )
-      .setColor('#ff0000');
+      .setImage(BANNER)
+      .setThumbnail(LOGO)
+      .setColor('#E10600')
+      .setFooter({ text: lang.footer });
 
     await rules.send({ embeds: [embed] });
   }
 
   // TRYOUTS
-  for (const lang of languages) {
+  for (const lang of LANGS) {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`tryout_${lang.code}`)
-        .setLabel(`${lang.tryoutButton} ${lang.emoji}`)
+        .setLabel(`${lang.tryoutBtn} ${lang.emoji}`)
         .setStyle(ButtonStyle.Danger)
     );
 
+    const embed = new EmbedBuilder()
+      .setTitle(`${lang.emoji} ${lang.tryoutTitle}`)
+      .setDescription(lang.tryoutDesc)
+      .setImage(BANNER)
+      .setThumbnail(LOGO)
+      .setColor('#00FFFF')
+      .setFooter({ text: lang.footer });
+
     await tryouts.send({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(`${lang.emoji} ${lang.name} Tryout`)
-          .setDescription('Press the button / Presiona / Clique / Appuyez')
-          .setColor('#00ffff')
-      ],
+      embeds: [embed],
       components: [row]
     });
   }
 
   // TIERS
-  for (const lang of languages) {
+  for (const lang of LANGS) {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`tiers_${lang.code}`)
-        .setLabel(`${lang.tierButton} ${lang.emoji}`)
+        .setCustomId(`tier_${lang.code}`)
+        .setLabel(`${lang.tierBtn} ${lang.emoji}`)
         .setStyle(ButtonStyle.Primary)
     );
 
+    const embed = new EmbedBuilder()
+      .setTitle(`${lang.emoji} ${lang.tierTitle}`)
+      .setDescription(lang.tierDesc)
+      .setImage(BANNER)
+      .setThumbnail(LOGO)
+      .setColor('#E10600')
+      .setFooter({ text: lang.footer });
+
     await tiers.send({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(`${lang.emoji} ${lang.name} Tiers`)
-          .setDescription('Choose your tier')
-          .setColor('#ffaa00')
-      ],
+      embeds: [embed],
       components: [row]
     });
   }
 });
 
 // ==========================
-// TICKETS
+// CREAR TICKET
 // ==========================
 client.on('interactionCreate', async interaction => {
   if (!interaction.isButton()) return;
 
   const isTryout = interaction.customId.startsWith('tryout_');
-  const isTier = interaction.customId.startsWith('tiers_');
+  const isTier = interaction.customId.startsWith('tier_');
+  const isClose = interaction.customId === 'close_ticket';
+
+  if (isClose) {
+    await interaction.reply({ content: '🧹 Cerrando...', ephemeral: true });
+
+    setTimeout(() => {
+      interaction.channel.delete().catch(console.error);
+    }, 2000);
+
+    return;
+  }
 
   if (!isTryout && !isTier) return;
 
   const code = interaction.customId.split('_')[1];
-  const lang = languages.find(l => l.code === code);
+  const lang = LANGS.find(x => x.code === code);
+  if (!lang) return;
+
+  const userName = interaction.user.username
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  const ticketType = isTryout ? 'tryout' : 'tier';
+  const ticketName = `${lang.ticket}-${ticketType}-${userName}`;
 
   const exists = interaction.guild.channels.cache.find(
-    c => c.name.includes(interaction.user.username.toLowerCase())
+    c => c.name === ticketName
   );
 
   if (exists) {
     return interaction.reply({
-      content: 'Ya tienes ticket abierto.',
+      content: '❌ Ya tienes un ticket abierto.',
       ephemeral: true
     });
   }
 
-  const overwrites = [
+  const perms = [
     {
       id: interaction.guild.id,
       deny: [PermissionsBitField.Flags.ViewChannel]
@@ -276,55 +357,46 @@ client.on('interactionCreate', async interaction => {
     }
   ];
 
-  const type = isTryout ? 'tryout' : 'tier';
-
   const ticket = await interaction.guild.channels.create({
-    name: `${lang.ticket}-${type}-${interaction.user.username}`,
+    name: ticketName,
     type: ChannelType.GuildText,
     parent: IDS.TICKET_CATEGORY,
-    permissionOverwrites: overwrites
+    permissionOverwrites: perms
   });
 
-  const close = new ActionRowBuilder().addComponents(
+  const closeRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('close_ticket')
-      .setLabel('❌ Cerrar')
+      .setLabel('❌ Cerrar Ticket')
       .setStyle(ButtonStyle.Danger)
   );
 
+  const embed = new EmbedBuilder()
+    .setTitle(
+      isTryout
+        ? `${lang.emoji} ${lang.tryoutTitle}`
+        : `${lang.emoji} ${lang.tierTitle}`
+    )
+    .setDescription(
+      isTryout
+        ? 'Escribe aquí tu información.'
+        : 'Escribe aquí tu información de tier.'
+    )
+    .setImage(BANNER)
+    .setThumbnail(LOGO)
+    .setColor('#00FFFF')
+    .setFooter({ text: lang.footer });
+
   await ticket.send({
-    embeds: [
-      new EmbedBuilder()
-        .setTitle(`${lang.emoji} ${lang.name}`)
-        .setDescription(
-          isTryout
-            ? 'Envía aquí tu información de tryout.'
-            : 'Envía aquí tu información de tiers.'
-        )
-        .setColor('#00ffff')
-    ],
-    components: [close]
+    embeds: [embed],
+    components: [closeRow]
   });
 
   await interaction.reply({
-    content: `✅ ${ticket}`,
+    content: `✅ Ticket creado: ${ticket}`,
     ephemeral: true
   });
 });
 
 // ==========================
-// CERRAR
-// ==========================
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isButton()) return;
-  if (interaction.customId !== 'close_ticket') return;
-
-  await interaction.reply({ content: '🧹', ephemeral: true });
-
-  setTimeout(() => {
-    interaction.channel.delete().catch(console.error);
-  }, 2000);
-});
-
-// ==========================
-client.login(process.env.DISCORD_TOKEN);
+client.login(TOKEN);
