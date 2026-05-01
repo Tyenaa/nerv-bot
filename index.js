@@ -166,9 +166,9 @@ client.once('ready', async () => {
     for (const lang of LANGS) {
       const embed = new EmbedBuilder()
         .setTitle(`${lang.emoji} ${lang.rulesTitle}`)
-        .setDescription('Respeta a todos
+        .setDescription(`Respeta a todos
 No spam
-No NSFW')
+No NSFW`)
         .setColor('#E10600')
         .setImage(PANEL)
         .setThumbnail(LOGO);
