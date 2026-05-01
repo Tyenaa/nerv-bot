@@ -38,44 +38,60 @@ const LOGO = 'https://media.discordapp.net/attachments/1490445497318641670/14904
 
 const LANGS = [
   {
-    code: 'es', name: 'Español', emoji: '🇪🇸',
-    rulesTitle: '📜 NERV — REGLAS OFICIALES',
-    tryoutTitle: '🎟️ TRYOUTS',
-    tryoutDesc: 'Presiona para abrir tu tryout',
-    tierTitle: '🎮 TIERS - NERV',
-    tierDesc: 'Selecciona tu tier y abre ticket',
-    buttonTryout: 'Abrir Tryout',
-    tierNames: ['🏆 Profesionales','⚡ Competitivos','🎯 Veteranos','📈 Aspirantes','🔰 En progreso']
+    code:'es', name:'Español', emoji:'🇪🇸',
+    rulesTitle:'📜 NERV — REGLAS OFICIALES',
+    tryoutTitle:'🎟️ NERV TRYOUTS',
+    tryoutText:`⚡ Aplica al equipo NERV
+
+Presiona el botón para iniciar tu proceso.
+Solo jugadores serios.`,
+    tierTitle:'🎮 TIERS - NERV',
+    tierDesc:'Selecciona tu tier y abre ticket',
+    tierNames:['🏆 Profesionales','⚡ Competitivos','🎯 Veteranos','📈 Aspirantes','🔰 En progreso'],
+    tryoutFooter:'⚡ NERV — No solo jugamos, dominamos.',
+    buttonTryout:'Abrir Tryout'
   },
   {
-    code: 'en', name: 'English', emoji: '🇺🇸',
-    rulesTitle: '📜 NERV — OFFICIAL RULES',
-    tryoutTitle: '🎟️ TRYOUTS',
-    tryoutDesc: 'Press to open your tryout',
-    tierTitle: '🎮 TIERS - NERV',
-    tierDesc: 'Choose your tier and open ticket',
-    buttonTryout: 'Open Tryout',
-    tierNames: ['🏆 Professionals','⚡ Competitive','🎯 Veterans','📈 Aspirants','🔰 In Progress']
+    code:'en', name:'English', emoji:'🇺🇸',
+    rulesTitle:'📜 NERV — OFFICIAL RULES',
+    tryoutTitle:'🎟️ NERV TRYOUTS',
+    tryoutText:`⚡ Apply for Team NERV
+
+Press the button to start your process.
+Serious players only.`,
+    tierTitle:'🎮 TIERS - NERV',
+    tierDesc:'Choose your tier and open ticket',
+    tierNames:['🏆 Professionals','⚡ Competitive','🎯 Veterans','📈 Aspirants','🔰 In Progress'],
+    tryoutFooter:'⚡ NERV — We don’t just play, we dominate.',
+    buttonTryout:'Open Tryout'
   },
   {
-    code: 'pt', name: 'Português', emoji: '🇧🇷',
-    rulesTitle: '📜 NERV — REGRAS OFICIAIS',
-    tryoutTitle: '🎟️ TRYOUTS',
-    tryoutDesc: 'Pressione para abrir seu tryout',
-    tierTitle: '🎮 TIERS - NERV',
-    tierDesc: 'Selecione seu tier e abra ticket',
-    buttonTryout: 'Abrir Tryout',
-    tierNames: ['🏆 Profissionais','⚡ Competitivos','🎯 Veteranos','📈 Aspirantes','🔰 Em progresso']
+    code:'pt', name:'Português', emoji:'🇧🇷',
+    rulesTitle:'📜 NERV — REGRAS OFICIAIS',
+    tryoutTitle:'🎟️ NERV TRYOUTS',
+    tryoutText:`⚡ Candidate-se para a equipe NERV
+
+Pressione o botão para iniciar seu processo.
+Apenas jogadores sérios.`,
+    tierTitle:'🎮 TIERS - NERV',
+    tierDesc:'Selecione seu tier e abra ticket',
+    tierNames:['🏆 Profissionais','⚡ Competitivos','🎯 Veteranos','📈 Aspirantes','🔰 Em progresso'],
+    tryoutFooter:'⚡ NERV — Não apenas jogamos, dominamos.',
+    buttonTryout:'Abrir Tryout'
   },
   {
-    code: 'fr', name: 'Français', emoji: '🇫🇷',
-    rulesTitle: '📜 NERV — RÈGLES OFFICIELLES',
-    tryoutTitle: '🎟️ TRYOUTS',
-    tryoutDesc: 'Appuie pour ouvrir ton tryout',
-    tierTitle: '🎮 TIERS - NERV',
-    tierDesc: 'Choisis ton tier et ouvre ticket',
-    buttonTryout: 'Ouvrir Tryout',
-    tierNames: ['🏆 Professionnels','⚡ Compétitifs','🎯 Vétérans','📈 Aspirants','🔰 En progression']
+    code:'fr', name:'Français', emoji:'🇫🇷',
+    rulesTitle:'📜 NERV — RÈGLES OFFICIELLES',
+    tryoutTitle:'🎟️ NERV TRYOUTS',
+    tryoutText:`⚡ Postule pour l\'équipe NERV
+
+Appuie sur le bouton pour commencer ton processus.
+Joueurs sérieux uniquement.`,
+    tierTitle:'🎮 TIERS - NERV',
+    tierDesc:'Choisis ton tier et ouvre ticket',
+    tierNames:['🏆 Professionnels','⚡ Compétitifs','🎯 Vétérans','📈 Aspirants','🔰 En progression'],
+    tryoutFooter:'⚡ NERV — Nous ne jouons pas seulement, nous dominons.',
+    buttonTryout:'Ouvrir Tryout'
   }
 ];
 
@@ -126,76 +142,50 @@ async function createTicket(interaction, type, data) {
     .setColor('#00FFFF')
     .setThumbnail(LOGO);
 
-  for (const [k, v] of Object.entries(data)) {
+  for (const [k,v] of Object.entries(data)) {
     embed.addFields({ name: k, value: v || 'No respondido' });
   }
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('cerrar_ticket')
-      .setLabel('❌ Cerrar Ticket')
-      .setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId('cerrar_ticket').setLabel('❌ Cerrar Ticket').setStyle(ButtonStyle.Danger)
   );
 
-  await channel.send({ embeds: [embed], components: [row] });
-  await interaction.reply({ content: `✅ Ticket creado: ${channel}`, ephemeral: true });
+  await channel.send({ embeds:[embed], components:[row] });
+  await interaction.reply({ content:`✅ Ticket creado: ${channel}`, ephemeral:true });
 }
-
-// ================= BIENVENIDA =================
-client.on('guildMemberAdd', async member => {
-  try {
-    const role = member.guild.roles.cache.get(IDS.miembro);
-    if (role) await member.roles.add(role);
-
-    const channel = member.guild.channels.cache.get(IDS.bienvenida);
-    if (!channel) return;
-
-    const embed = new EmbedBuilder()
-      .setTitle('🎉 ¡Bienvenido a NERV! ⚡')
-      .setDescription(`Bienvenido ${member.user.username}`)
-      .setColor('#8A2BE2')
-      .setThumbnail(LOGO)
-      .setImage(WELCOME);
-
-    await channel.send({ embeds: [embed] });
-  } catch (e) { console.error(e); }
-});
 
 // ================= READY =================
 client.once('ready', async () => {
   console.log(`🔥 ${client.user.tag}`);
 
-  const reglas = await client.channels.fetch(IDS.reglas).catch(() => null);
-  const tryouts = await client.channels.fetch(IDS.tryouts).catch(() => null);
-  const tiers = await client.channels.fetch(IDS.tiers).catch(() => null);
+  const reglas = await client.channels.fetch(IDS.reglas).catch(()=>null);
+  const tryouts = await client.channels.fetch(IDS.tryouts).catch(()=>null);
+  const tiers = await client.channels.fetch(IDS.tiers).catch(()=>null);
 
-  // ===== REGLAS =====
   if (reglas) {
     for (const lang of LANGS) {
       const embed = new EmbedBuilder()
         .setTitle(`${lang.emoji} ${lang.rulesTitle}`)
-        .addFields(
-          { name: '🧠 RESPETO', value: 'Sin insultos\nRespeta a todos\nCero discriminación', inline: true },
-          { name: '🚫 PROHIBIDO', value: 'Nada NSFW\nNo spam\nNo links sospechosos', inline: true },
-          { name: '🎮 CANALES', value: 'Usa canales correctamente\nEvita spam', inline: true },
-          { name: '🛡️ STAFF', value: 'Respeta admins\nDecisiones finales', inline: true },
-          { name: '⚔️ COMPETITIVO', value: 'Sin trampas\nJuega limpio', inline: true },
-          { name: '🤝 COMUNIDAD', value: 'Apoya\nSin drama', inline: true },
-          { name: '📢 PROMOCIÓN', value: 'Sin promo sin permiso', inline: true },
-          { name: '🔊 VOZ', value: 'No gritar\nMic limpio', inline: true },
-          { name: '⚠️ SANCIONES', value: 'Warn / Mute / Ban', inline: true }
-        )
+        .setDescription('Respeta a todos
+No spam
+No NSFW')
+        .setColor('#E10600')
         .setImage(PANEL)
-        .setThumbnail(LOGO)
-        .setColor('#E10600');
-
-      await reglas.send({ embeds: [embed] });
+        .setThumbnail(LOGO);
+      await reglas.send({embeds:[embed]});
     }
   }
 
-  // ===== TRYOUTS =====
   if (tryouts) {
     for (const lang of LANGS) {
+      const embed = new EmbedBuilder()
+        .setTitle(`${lang.emoji} ${lang.tryoutTitle}`)
+        .setDescription(lang.tryoutText)
+        .setFooter({text: lang.tryoutFooter})
+        .setColor('#E10600')
+        .setImage(PANEL)
+        .setThumbnail(LOGO);
+
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`tryout_${lang.code}`)
@@ -203,33 +193,25 @@ client.once('ready', async () => {
           .setStyle(ButtonStyle.Danger)
       );
 
-      const embed = new EmbedBuilder()
-        .setTitle(`${lang.emoji} ${lang.tryoutTitle}`)
-        .setDescription(lang.tryoutDesc)
-        .setImage(PANEL)
-        .setThumbnail(LOGO)
-        .setColor('#E10600');
-
-      await tryouts.send({ embeds: [embed], components: [row] });
+      await tryouts.send({embeds:[embed], components:[row]});
     }
   }
 
-  // ===== TIERS =====
   if (tiers) {
     for (const lang of LANGS) {
       const embed = new EmbedBuilder()
         .setTitle(`${lang.emoji} ${lang.tierTitle}`)
         .setDescription(lang.tierDesc)
         .addFields(
-          { name: '🏆 Profesionales', value: 'RLCS' },
-          { name: '⚡ Competitivos', value: 'SSL → GC3' },
-          { name: '🎯 Veteranos', value: 'GC2 → C3' },
-          { name: '📈 Aspirantes', value: 'C2 → D3' },
-          { name: '🔰 En progreso', value: 'D2 ↓' }
+          {name: lang.tierNames[0], value:'RLCS'},
+          {name: lang.tierNames[1], value:'SSL → GC3'},
+          {name: lang.tierNames[2], value:'GC2 → C3'},
+          {name: lang.tierNames[3], value:'C2 → D3'},
+          {name: lang.tierNames[4], value:'D2 ↓'}
         )
+        .setColor('#E10600')
         .setImage(PANEL)
-        .setThumbnail(LOGO)
-        .setColor('#E10600');
+        .setThumbnail(LOGO);
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`tier1_${lang.code}`).setLabel(lang.tierNames[0]).setStyle(ButtonStyle.Danger),
@@ -239,7 +221,7 @@ client.once('ready', async () => {
         new ButtonBuilder().setCustomId(`tier5_${lang.code}`).setLabel(lang.tierNames[4]).setStyle(ButtonStyle.Danger)
       );
 
-      await tiers.send({ embeds: [embed], components: [row] });
+      await tiers.send({embeds:[embed], components:[row]});
     }
   }
 });
