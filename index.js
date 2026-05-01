@@ -37,10 +37,46 @@ const WELCOME = 'https://media.discordapp.net/attachments/1490445497318641670/14
 const LOGO = 'https://media.discordapp.net/attachments/1490445497318641670/1490476067981496481/nerv_logo.png';
 
 const LANGS = [
-  { code: 'es', name: 'Español', emoji: '🇪🇸' },
-  { code: 'en', name: 'English', emoji: '🇺🇸' },
-  { code: 'pt', name: 'Português', emoji: '🇧🇷' },
-  { code: 'fr', name: 'Français', emoji: '🇫🇷' }
+  {
+    code: 'es', name: 'Español', emoji: '🇪🇸',
+    rulesTitle: '📜 NERV — REGLAS OFICIALES',
+    tryoutTitle: '🎟️ TRYOUTS',
+    tryoutDesc: 'Presiona para abrir tu tryout',
+    tierTitle: '🎮 TIERS - NERV',
+    tierDesc: 'Selecciona tu tier y abre ticket',
+    buttonTryout: 'Abrir Tryout',
+    tierNames: ['🏆 Profesionales','⚡ Competitivos','🎯 Veteranos','📈 Aspirantes','🔰 En progreso']
+  },
+  {
+    code: 'en', name: 'English', emoji: '🇺🇸',
+    rulesTitle: '📜 NERV — OFFICIAL RULES',
+    tryoutTitle: '🎟️ TRYOUTS',
+    tryoutDesc: 'Press to open your tryout',
+    tierTitle: '🎮 TIERS - NERV',
+    tierDesc: 'Choose your tier and open ticket',
+    buttonTryout: 'Open Tryout',
+    tierNames: ['🏆 Professionals','⚡ Competitive','🎯 Veterans','📈 Aspirants','🔰 In Progress']
+  },
+  {
+    code: 'pt', name: 'Português', emoji: '🇧🇷',
+    rulesTitle: '📜 NERV — REGRAS OFICIAIS',
+    tryoutTitle: '🎟️ TRYOUTS',
+    tryoutDesc: 'Pressione para abrir seu tryout',
+    tierTitle: '🎮 TIERS - NERV',
+    tierDesc: 'Selecione seu tier e abra ticket',
+    buttonTryout: 'Abrir Tryout',
+    tierNames: ['🏆 Profissionais','⚡ Competitivos','🎯 Veteranos','📈 Aspirantes','🔰 Em progresso']
+  },
+  {
+    code: 'fr', name: 'Français', emoji: '🇫🇷',
+    rulesTitle: '📜 NERV — RÈGLES OFFICIELLES',
+    tryoutTitle: '🎟️ TRYOUTS',
+    tryoutDesc: 'Appuie pour ouvrir ton tryout',
+    tierTitle: '🎮 TIERS - NERV',
+    tierDesc: 'Choisis ton tier et ouvre ticket',
+    buttonTryout: 'Ouvrir Tryout',
+    tierNames: ['🏆 Professionnels','⚡ Compétitifs','🎯 Vétérans','📈 Aspirants','🔰 En progression']
+  }
 ];
 
 const STAFF_PERMS = [
@@ -137,7 +173,7 @@ client.once('ready', async () => {
   if (reglas) {
     for (const lang of LANGS) {
       const embed = new EmbedBuilder()
-        .setTitle(`${lang.emoji} 📜 NERV — REGLAS OFICIALES`)
+        .setTitle(`${lang.emoji} ${lang.rulesTitle}`)
         .addFields(
           { name: '🧠 RESPETO', value: 'Sin insultos\nRespeta a todos\nCero discriminación', inline: true },
           { name: '🚫 PROHIBIDO', value: 'Nada NSFW\nNo spam\nNo links sospechosos', inline: true },
@@ -163,13 +199,13 @@ client.once('ready', async () => {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`tryout_${lang.code}`)
-          .setLabel(`Tryout ${lang.name}`)
+          .setLabel(lang.buttonTryout)
           .setStyle(ButtonStyle.Danger)
       );
 
       const embed = new EmbedBuilder()
-        .setTitle(`${lang.emoji} 🎟️ TRYOUTS`)
-        .setDescription('Presiona para abrir tu tryout')
+        .setTitle(`${lang.emoji} ${lang.tryoutTitle}`)
+        .setDescription(lang.tryoutDesc)
         .setImage(PANEL)
         .setThumbnail(LOGO)
         .setColor('#E10600');
@@ -182,8 +218,8 @@ client.once('ready', async () => {
   if (tiers) {
     for (const lang of LANGS) {
       const embed = new EmbedBuilder()
-        .setTitle(`${lang.emoji} 🎮 TIERS - NERV`)
-        .setDescription('Selecciona tu tier y abre ticket')
+        .setTitle(`${lang.emoji} ${lang.tierTitle}`)
+        .setDescription(lang.tierDesc)
         .addFields(
           { name: '🏆 Profesionales', value: 'RLCS' },
           { name: '⚡ Competitivos', value: 'SSL → GC3' },
@@ -196,11 +232,11 @@ client.once('ready', async () => {
         .setColor('#E10600');
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`tier1_${lang.code}`).setLabel('🏆 Profesionales').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId(`tier2_${lang.code}`).setLabel('⚡ Competitivos').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId(`tier3_${lang.code}`).setLabel('🎯 Veteranos').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId(`tier4_${lang.code}`).setLabel('📈 Aspirantes').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId(`tier5_${lang.code}`).setLabel('🔰 En progreso').setStyle(ButtonStyle.Danger)
+        new ButtonBuilder().setCustomId(`tier1_${lang.code}`).setLabel(lang.tierNames[0]).setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`tier2_${lang.code}`).setLabel(lang.tierNames[1]).setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`tier3_${lang.code}`).setLabel(lang.tierNames[2]).setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`tier4_${lang.code}`).setLabel(lang.tierNames[3]).setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`tier5_${lang.code}`).setLabel(lang.tierNames[4]).setStyle(ButtonStyle.Danger)
       );
 
       await tiers.send({ embeds: [embed], components: [row] });
